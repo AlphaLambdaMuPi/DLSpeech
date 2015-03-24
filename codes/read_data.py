@@ -19,17 +19,23 @@ def read_label(path, pmpath, datasize=1E9):
     print('Label readed : {0}'.format(data_count))
     return np.array(arr)
 
-def read_feature(path, datasize=1E9):
+def read_feature(path, datasize=1E9, label=False):
     arr = []
+    lab = []
     data_count = 0
     for line in open(path):
-        x = [float(a) for a in line.strip('\n').split()[1:]]
+        ln = line.strip('\n').split()
+        x = [float(a) for a in ln[1:]]
         arr.append(x)
+        if label:
+            lab.append(ln[0])
         data_count += 1
         if data_count >= datasize:
             break
 
     print('Feature readed : {0}'.format(data_count))
+    if label:
+        return np.array(arr), lab
     return np.array(arr)
 
 def sort_label(fpath, lpath, newlpath):
