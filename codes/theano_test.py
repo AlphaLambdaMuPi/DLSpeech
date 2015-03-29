@@ -22,6 +22,7 @@ class LogisticRegression:
         self._K = 2
 
     def fit(self, X, Y, Eta=3E0):
+        X = X.astype(config.floatX)
         print(X, Y)
         self._K = int(np.max(Y)) + 1
         N_train = X.shape[0]
@@ -53,7 +54,7 @@ class LogisticRegression:
         Ein = 1.0
         Epoch = 0
 
-        YY = LabelToBinary(Y, self._K)
+        YY = LabelToBinary(Y, self._K).astype(config.floatX)
 
         for i in range(50 * Batch_num):
             Bno = i % Batch_num
