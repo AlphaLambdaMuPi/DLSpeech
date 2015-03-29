@@ -2,6 +2,7 @@ import numpy as np
 import theano.tensor as T
 from theano import function, shared, pp, config
 from theano.printing import debugprint
+import time
 
 def sigmoid(x):
     return 1 / (1 + T.exp(-x))
@@ -21,7 +22,7 @@ class LogisticRegression:
         self._w = None
         self._K = 2
 
-    def fit(self, X, Y, Eta=3E0):
+    def fit(self, X, Y, Eta=3E-1):
         X = X.astype(config.floatX)
         print(X, Y)
         self._K = int(np.max(Y)) + 1
@@ -43,7 +44,7 @@ class LogisticRegression:
         # print(sm.type())
         # ein_grad = T.sum(x + sm) / N_train
         
-        Batch_size = 100
+        Batch_size = 1000
         Batch_num = N_train // Batch_size
         degrade_rate = 0.9997 #1 - 5E-2 * (Batch_size / N_train)
 
@@ -56,7 +57,8 @@ class LogisticRegression:
 
         YY = LabelToBinary(Y, self._K).astype(config.floatX)
 
-        for i in range(50 * Batch_num):
+        t0 = time.time()
+        for i in range(500 * Batch_num):
             Bno = i % Batch_num
             X_mb = X[Batch_size*Bno:Batch_size*(Bno+1),:]
             Y_mb = YY[Batch_size*Bno:Batch_size*(Bno+1),:]
@@ -64,7 +66,8 @@ class LogisticRegression:
             if Bno == Batch_num - 1:
                 Epoch += 1
                 Ein = ein_func(X, YY)
-                print('Epoch {0}, \tEin = {1}'.format(Epoch, Ein))
+                print('Epoch {0}, \tEin = {1}, \ttime = {2}'.format(Epoch, Ein, time.time()-t0))
+                t0 = time.time()
             # print(w.get_value())
 
         self._w = w.get_value()
