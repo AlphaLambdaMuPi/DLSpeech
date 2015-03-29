@@ -30,7 +30,7 @@ class LogisticRegression:
         y = T.matrix('y', config.floatX)
         # y = yy.dimshuffle(0, 'x')
         w = shared(np.zeros((D, self._K)).astype(config.floatX), name='w')
-        eta = shared(Eta, name='eta')
+        eta = shared(np.asarray(Eta).astype(config.floatX), name='eta')
 
         dotted = T.exp(T.dot(x, w))
         dsm = T.sum(dotted, axis=1).dimshuffle(0, 'x')
