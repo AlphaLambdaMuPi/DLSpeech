@@ -1,5 +1,7 @@
+import numpy as np
 import read_data
 from sklearn import linear_model, cross_validation, svm, metrics, grid_search
+from theano_test import LogisticRegression
 
 def predict_submit(model, smpath, outpath, pmpath):
     pmap = []
@@ -22,12 +24,13 @@ def main():
     phone_map_path = '../data/phone_map'
     p48_39_path = '../data/48_39.map'
 
-    DATA_SIZE = 10000
+    DATA_SIZE = 100000
     X = read_data.read_feature(feature_path, DATA_SIZE)
     Y = read_data.read_label(label_path, phone_map_path, DATA_SIZE)
-    # print(X, Y)
     # X_train, X_test, Y_train, Y_test = cross_validation.train_test_split(
         # X, Y, test_size=0.5)
+
+    # Y = np.sign(Y-19.5)
     
     train_size = len(Y) * 0.5
     train_size = int(train_size)
@@ -42,19 +45,20 @@ def main():
           {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
          ]
 
-    model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
+    model = LogisticRegression()
+    # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
     # model = linear_model.LogisticRegression()
     model.fit(X_train, Y_train)
     Y_tpred = model.predict(X_train)
     Y_pred = model.predict(X_test)
-    
+
     # print(Y_test, Y_pred)
 
-    Ein = metrics.zero_one_loss(Y_train, Y_tpred)
-    Etest = metrics.zero_one_loss(Y_test, Y_pred)
-    print('Ein = {0}'.format(Ein))
-    print('Etest = {0}'.format(Etest))
+    Ain = 1 - metrics.zero_one_loss(Y_train, Y_tpred)
+    Atest = 1 - metrics.zero_one_loss(Y_test, Y_pred)
+    print('Ain = {0}'.format(Ain))
+    print('Atest = {0}'.format(Atest))
 
     # predict_submit(model, submit_feature_path, 'test.csv', p48_39_path)
     
