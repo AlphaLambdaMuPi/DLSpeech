@@ -1,6 +1,6 @@
 import numpy as np
 import theano.tensor as T
-from theano import function, shared, pp
+from theano import function, shared, pp, config
 from theano.printing import debugprint
 
 def sigmoid(x):
@@ -21,15 +21,15 @@ class LogisticRegression:
         self._w = None
         self._K = 2
 
-    def fit(self, X, Y, Eta=1E1):
+    def fit(self, X, Y, Eta=3E0):
         print(X, Y)
         self._K = int(np.max(Y)) + 1
         N_train = X.shape[0]
         D = X.shape[1]
-        x = T.matrix('x')
-        y = T.matrix('y')
+        x = T.matrix('x', config.floatX)
+        y = T.matrix('y', config.floatX)
         # y = yy.dimshuffle(0, 'x')
-        w = shared(np.zeros((D, self._K)), name='w')
+        w = shared(np.zeros((D, self._K)).astype(config.floatX), name='w')
         eta = shared(Eta, name='eta')
 
         dotted = T.exp(T.dot(x, w))
@@ -42,18 +42,20 @@ class LogisticRegression:
         # print(sm.type())
         # ein_grad = T.sum(x + sm) / N_train
         
+        Batch_size = 100
+        Batch_num = N_train // Batch_size
+        degrade_rate = 0.9997 #1 - 5E-2 * (Batch_size / N_train)
+
         ein_func = function([x, y], ein)
-        update_func = function([x, y], None, updates=[(w, w - eta * ein_grad), (eta, T.max((eta * 0.9997, 1E-2)))])
+        update_func = function([x, y], None, updates=[(w, w - eta * ein_grad), (eta, T.max((eta * degrade_rate, 1E-2)))])
         # eg = function([x, y], ein_grad)
 
         Ein = 1.0
-        Batch_size = 100
-        Batch_num = N_train // Batch_size
         Epoch = 0
 
         YY = LabelToBinary(Y, self._K)
 
-        for i in range(2000000 // Batch_size):
+        for i in range(50 * Batch_num):
             Bno = i % Batch_num
             X_mb = X[Batch_size*Bno:Batch_size*(Bno+1),:]
             Y_mb = YY[Batch_size*Bno:Batch_size*(Bno+1),:]
