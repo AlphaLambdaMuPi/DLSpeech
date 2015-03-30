@@ -32,7 +32,8 @@ class DNN:
         self._b_delta = []
         self._l = [self._x]
         for i in range(self._L-1):
-            alp = (self._Dims[i] + self._Dims[i]) ** 0.5 / 3
+            # alp = (self._Dims[i] + self._Dims[i]) ** 0.5 / 3
+            alp = self._Dims[i]
             self._w.append(shared(rng.randn(self._Dims[i], self._Dims[i+1]).astype(config.floatX) / alp))
             self._b.append(shared(rng.randn(self._Dims[i+1]).astype(config.floatX) / alp))
             self._w_delta.append(shared(np.zeros((self._Dims[i], self._Dims[i+1])).astype(config.floatX)))
