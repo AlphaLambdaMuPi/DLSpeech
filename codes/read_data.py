@@ -1,4 +1,9 @@
 import numpy as np
+from sklearn import preprocessing
+
+def preproc(X):
+    return X
+    return preprocessing.normalize(X)
 
 def read_label(path, pmpath, datasize=1E9):
     pmap = {}
@@ -36,7 +41,7 @@ def read_feature(path, datasize=1E9, label=False):
     print('Feature readed : {0}'.format(data_count))
     if label:
         return np.array(arr), lab
-    return np.array(arr)
+    return preproc(np.array(arr))
 
 def sort_label(fpath, lpath, newlpath):
     names = []

@@ -27,11 +27,15 @@ class DNN:
         self._y = T.matrix('y', config.floatX)
         self._w = []
         self._b = []
+        self._w_delta = []
+        self._b_delta = []
         self._l = [self._x]
         for i in range(self._L-1):
             alp = self._Dims[i] ** 0.5
             self._w.append(shared(rng.randn(self._Dims[i], self._Dims[i+1]).astype(config.floatX) / alp))
             self._b.append(shared(rng.randn(self._Dims[i+1]).astype(config.floatX) / alp))
+            self._w_delta.append(shared(np.zeros((self._Dims[i], self._Dims[i+1])).astype(config.floatX)))
+            self._b_delta.append(shared(np.zeros((self._Dims[i+1])).astype(config.floatX)))
             T.addbroadcast(self._b[i], 0)
         for i in range(self._L-1):
             if i == self._L-2:
@@ -56,13 +60,21 @@ class DNN:
     def target_func(self):
         return function([self._x, self._y], self._j)
 
-    def update_func(self, degrade_rate, min_eta):
+    def update_func(self, degrade_rate, min_eta, momentum):
         udlist = []
-        for i in range(self._L-1):
-            udlist.append((self._w[i], self._w[i] - self._eta * self._j_grad_w[i]))
-            udlist.append((self._b[i], self._b[i] - self._eta * self._j_grad_b[i]))
+        for i in range(self._L-2, -1, -1):
+            udlist.append((self._w_delta[i], self._w_delta[i] * momentum - self._eta * self._j_grad_w[i] * momentum))
+            udlist.append((self._b_delta[i], self._b_delta[i] * momentum - self._eta * self._j_grad_b[i] * momentum))
         udlist.append((self._eta, T.max((self._eta * degrade_rate, min_eta))))
         ret = function([self._x, self._y], None, updates=udlist)
+        return ret
+
+    def realupdate_func(self):
+        udlist = []
+        for i in range(self._L-2, -1, -1):
+            udlist.append((self._w[i], self._w[i] + self._w_delta[i]))
+            udlist.append((self._b[i], self._b[i] + self._b_delta[i]))
+        ret = function([], None, updates=udlist)
         return ret
 
     def predict_func(self):
@@ -78,13 +90,20 @@ class DNN:
         Batch_size = 128
         Batch_num = N_train // Batch_size
 
-        Eta = 6E-2
+        Eta = 5E-3
         degrade_rate = 0.999995 #1 - 5E-2 * (Batch_size / N_train)
         min_eta = Eta * 0.2
 
+        # Eta = 0.0001
+        # degrade_rate = 0.9999
+        # min_eta = Eta * 0
+        momentum = 0.9
+        # momentum = 0.0
+
         self._eta.set_value(np.asarray(Eta).astype(config.floatX))
         jfunc = self.target_func()
-        ufunc = self.update_func(degrade_rate, min_eta)
+        ufunc = self.update_func(degrade_rate, min_eta, momentum)
+        rfunc = self.realupdate_func()
 
         Ein = 1.0
         Epoch = 0
@@ -102,6 +121,7 @@ class DNN:
                 X_mb = X[b_start:b_end,:]
                 Y_mb = Y[b_start:b_end,:]
                 ufunc(X_mb, Y_mb)
+                rfunc()
                 if Bno == Batch_num - 1:
                     Epoch += 1
                     J = jfunc(X, Y)

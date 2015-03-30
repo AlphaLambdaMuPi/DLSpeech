@@ -1,6 +1,6 @@
 import numpy as np
 import read_data
-from sklearn import linear_model, cross_validation, svm, metrics, grid_search
+from sklearn import linear_model, cross_validation, svm, metrics, grid_search, preprocessing
 from theano_test import LogisticRegression
 from neural_network import DNN
 
@@ -20,15 +20,15 @@ def predict_submit(model, smpath, outpath, pmpath):
 
 def main():
     orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
-    feature_path = '../data/train_100000.ark'
-    label_path = '../data/train_100000.lab'
+    # feature_path = '../data/train_100000.ark'
+    # label_path = '../data/train_100000.lab'
     feature_path = orig_path + 'fbank/train.ark'
     label_path = orig_path + 'label/train_sorted.lab'
     submit_feature_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/fbank/test.ark'
     phone_map_path = '../data/phone_map'
     p48_39_path = '../data/48_39.map'
 
-    DATA_SIZE = 200000
+    DATA_SIZE = 100000
     X = read_data.read_feature(feature_path, DATA_SIZE)
     Y = read_data.read_label(label_path, p48_39_path, DATA_SIZE)
     # X_train, X_test, Y_train, Y_test = cross_validation.train_test_split(
