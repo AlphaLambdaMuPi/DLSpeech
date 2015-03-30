@@ -2,9 +2,9 @@ import numpy as np
 
 def read_label(path, pmpath, datasize=1E9):
     pmap = {}
-    for line in open(pmpath):
+    for i, line in enumerate(list(open(pmpath))):
         x = line.strip('\n').split()
-        pmap[x[0]] = int(x[1])
+        pmap[x[0]] = i
 
     arr = []
     data_count = 0

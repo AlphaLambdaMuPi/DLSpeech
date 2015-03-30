@@ -22,7 +22,7 @@ class LogisticRegression:
         self._w = None
         self._K = 2
 
-    def fit(self, X, Y, Eta=3E-1):
+    def fit(self, X, Y, Eta=3E0):
         X = X.astype(config.floatX)
         print(X, Y)
         self._K = int(np.max(Y)) + 1
@@ -44,12 +44,12 @@ class LogisticRegression:
         # print(sm.type())
         # ein_grad = T.sum(x + sm) / N_train
         
-        Batch_size = 1000
+        Batch_size = 100
         Batch_num = N_train // Batch_size
         degrade_rate = 0.9997 #1 - 5E-2 * (Batch_size / N_train)
 
         ein_func = function([x, y], ein)
-        update_func = function([x, y], None, updates=[(w, w - eta * ein_grad), (eta, T.max((eta * degrade_rate, 1E-2)))])
+        update_func = function([x, y], None, updates=[(w, w - eta * ein_grad), (eta, T.max((eta * degrade_rate, 1E-1)))])
         # eg = function([x, y], ein_grad)
 
         Ein = 1.0
@@ -58,20 +58,19 @@ class LogisticRegression:
         YY = LabelToBinary(Y, self._K).astype(config.floatX)
 
         t0 = time.time()
-        for i in range(500 * Batch_num):
-            Bno = i % Batch_num
-            X_mb = X[Batch_size*Bno:Batch_size*(Bno+1),:]
-            Y_mb = YY[Batch_size*Bno:Batch_size*(Bno+1),:]
-            update_func(X_mb, Y_mb)
-            if Bno == Batch_num - 1:
-                Epoch += 1
-                Ein = ein_func(X, YY)
-                print('Epoch {0}, \tEin = {1}, \ttime = {2}'.format(Epoch, Ein, time.time()-t0))
-                t0 = time.time()
-            # print(w.get_value())
-
-        self._w = w.get_value()
-
+        for i in range(5000 * Batch_num):
+            try:
+                Bno = i % Batch_num
+                X_mb = X[Batch_size*Bno:Batch_size*(Bno+1),:]
+                Y_mb = YY[Batch_size*Bno:Batch_size*(Bno+1),:]
+                update_func(X_mb, Y_mb)
+                if Bno == Batch_num - 1:
+                    Epoch += 1
+                    Ein = ein_func(X, YY)
+                    print('Epoch {0}, \tEin = {1}, \ttime = {2}, \teta = {3}'.format(Epoch, Ein, time.time()-t0, eta.get_value()))
+                    t0 = time.time()
+            except KeyboardInterrupt:
+                break
 
     def predict(self, X):
         N_test = X.shape[0]
