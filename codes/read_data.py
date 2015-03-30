@@ -1,4 +1,5 @@
 import numpy as np
+import label_error
 from sklearn import preprocessing
 
 def preproc(X):
@@ -22,6 +23,7 @@ def read_label(path, pmpath, datasize=1E9):
             break
 
     print('Label readed : {0}'.format(data_count))
+    # return label_error.transform_label(np.array(arr))
     return np.array(arr)
 
 def read_feature(path, datasize=1E9, label=False):

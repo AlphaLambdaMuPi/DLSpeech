@@ -34,7 +34,7 @@ References:
 """
 __docformat__ = 'restructedtext en'
 
-import cPickle
+import pickle
 import gzip
 import os
 import sys
@@ -45,6 +45,7 @@ import numpy
 import theano
 import theano.tensor as T
 
+import read_data
 
 class LogisticRegression(object):
     """Multi-class Logistic Regression Class
@@ -178,32 +179,42 @@ def load_data(dataset):
     #############
 
     # Download the MNIST dataset if it is not present
-    data_dir, data_file = os.path.split(dataset)
-    if data_dir == "" and not os.path.isfile(dataset):
-        # Check if dataset is in the data directory.
-        new_path = os.path.join(
-            os.path.split(__file__)[0],
-            "..",
-            "data",
-            dataset
-        )
-        if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
-            dataset = new_path
+    # data_dir, data_file = os.path.split(dataset)
+    # if data_dir == "" and not os.path.isfile(dataset):
+        # # Check if dataset is in the data directory.
+        # new_path = os.path.join(
+            # os.path.split(__file__)[0],
+            # "..",
+            # "data",
+            # dataset
+        # )
+        # if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
+            # dataset = new_path
 
-    if (not os.path.isfile(dataset)) and data_file == 'mnist.pkl.gz':
-        import urllib
-        origin = (
-            'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
-        )
-        print 'Downloading data from %s' % origin
-        urllib.urlretrieve(origin, dataset)
+    # if (not os.path.isfile(dataset)) and data_file == 'mnist.pkl.gz':
+        # import urllib
+        # origin = (
+            # 'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
+        # )
+        # print ('Downloading data from %s' % origin)
+        # urllib.urlretrieve(origin, dataset)
 
-    print '... loading data'
+    print ('... loading data')
 
     # Load the dataset
-    f = gzip.open(dataset, 'rb')
-    train_set, valid_set, test_set = cPickle.load(f)
-    f.close()
+    # f = gzip.open(dataset, 'rb')
+    # train_set, valid_set, test_set = cPickle.load(f)
+    # f.close()
+
+    orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
+    feature_path = orig_path + 'fbank/train.ark'
+    label_path = orig_path + 'label/train_sorted.lab'
+    p48_39_path = '../data/48_39.map'
+
+    DATA_SIZE = 100000
+    X = read_data.read_feature(feature_path, DATA_SIZE)
+    Y = read_data.read_label(label_path, p48_39_path, DATA_SIZE)
+
     #train_set, valid_set, test_set format: tuple(input, target)
     #input is an numpy.ndarray of 2 dimensions (a matrix)
     #witch row's correspond to an example. target is a
@@ -235,6 +246,14 @@ def load_data(dataset):
         # ``shared_y`` we will have to cast it to int. This little hack
         # lets ous get around this issue
         return shared_x, T.cast(shared_y, 'int32')
+
+    train_size = len(Y) * 0.8
+    train_size = int(train_size)
+    valid_size = int(len(Y) * 0.9)
+
+    train_set = (X[:train_size,:], Y[:train_size])
+    valid_set = (X[train_size:valid_size,:], Y[train_size:valid_size])
+    test_set = (X[valid_size:,:], Y[valid_size:])
 
     test_set_x, test_set_y = shared_dataset(test_set)
     valid_set_x, valid_set_y = shared_dataset(valid_set)
@@ -280,7 +299,7 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000,
     ######################
     # BUILD ACTUAL MODEL #
     ######################
-    print '... building the model'
+    print ('... building the model')
 
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
@@ -345,7 +364,7 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000,
     ###############
     # TRAIN MODEL #
     ###############
-    print '... training the model'
+    print ('... training the model')
     # early-stopping parameters
     patience = 5000  # look as this many examples regardless
     patience_increase = 2  # wait this much longer when a new best is
@@ -427,8 +446,8 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000,
         )
         % (best_validation_loss * 100., test_score * 100.)
     )
-    print 'The code run for %d epochs, with %f epochs/sec' % (
-        epoch, 1. * epoch / (end_time - start_time))
+    print ('The code run for %d epochs, with %f epochs/sec' % (
+        epoch, 1. * epoch / (end_time - start_time)))
     print >> sys.stderr, ('The code for file ' +
                           os.path.split(__file__)[1] +
                           ' ran for %.1fs' % ((end_time - start_time)))

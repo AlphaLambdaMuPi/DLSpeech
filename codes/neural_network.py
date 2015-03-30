@@ -3,6 +3,7 @@ import theano.tensor as T
 from theano import function, shared, pp, config
 from theano.tensor.shared_randomstreams import RandomStreams
 from theano.printing import debugprint
+import label_error
 import time
 
 def sigmoid(x):
@@ -31,7 +32,7 @@ class DNN:
         self._b_delta = []
         self._l = [self._x]
         for i in range(self._L-1):
-            alp = self._Dims[i] ** 0.5
+            alp = (self._Dims[i] + self._Dims[i]) ** 0.5 / 3
             self._w.append(shared(rng.randn(self._Dims[i], self._Dims[i+1]).astype(config.floatX) / alp))
             self._b.append(shared(rng.randn(self._Dims[i+1]).astype(config.floatX) / alp))
             self._w_delta.append(shared(np.zeros((self._Dims[i], self._Dims[i+1])).astype(config.floatX)))
@@ -63,8 +64,8 @@ class DNN:
     def update_func(self, degrade_rate, min_eta, momentum):
         udlist = []
         for i in range(self._L-2, -1, -1):
-            udlist.append((self._w_delta[i], self._w_delta[i] * momentum - self._eta * self._j_grad_w[i] * momentum))
-            udlist.append((self._b_delta[i], self._b_delta[i] * momentum - self._eta * self._j_grad_b[i] * momentum))
+            udlist.append((self._w_delta[i], self._w_delta[i] * momentum - self._eta * self._j_grad_w[i]))
+            udlist.append((self._b_delta[i], self._b_delta[i] * momentum - self._eta * self._j_grad_b[i]))
         udlist.append((self._eta, T.max((self._eta * degrade_rate, min_eta))))
         ret = function([self._x, self._y], None, updates=udlist)
         return ret
@@ -90,15 +91,15 @@ class DNN:
         Batch_size = 128
         Batch_num = N_train // Batch_size
 
-        Eta = 5E-3
+        Eta = 5E-2
         degrade_rate = 0.999995 #1 - 5E-2 * (Batch_size / N_train)
         min_eta = Eta * 0.2
 
         # Eta = 0.0001
-        # degrade_rate = 0.9999
+        # degrade_rate = 1.0
         # min_eta = Eta * 0
         momentum = 0.9
-        # momentum = 0.0
+        momentum = 0.0
 
         self._eta.set_value(np.asarray(Eta).astype(config.floatX))
         jfunc = self.target_func()
@@ -125,19 +126,22 @@ class DNN:
                 if Bno == Batch_num - 1:
                     Epoch += 1
                     J = jfunc(X, Y)
-                    print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}'.format(
-                        Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()))
+                    yp = self.predict(X)
+                    Ain = label_error.calc_accuracy(YY, yp)
+                    print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}, \tAin = {4:.4f}'.format(
+                        Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()), Ain)
                     )
                     t0 = time.time()
 
                     # new_eta = self._eta.get_value()
                     # if J > current_j:
-                        # new_eta *= 0.9
+                        # new_eta *= 0.7
                     # else:
-                        # new_eta *= 1.01
+                        # new_eta *= 1.1
                         # if i > Batch_num * 15:
                             # new_eta *= 1.1
                     # self._eta.set_value(new_eta)
+
                     current_j = J
                     # for i in range(0, 1):
                         # print(self._w[i].get_value())

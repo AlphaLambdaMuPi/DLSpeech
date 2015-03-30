@@ -1,21 +1,18 @@
 import numpy as np
 import read_data
+import label_error
 from sklearn import linear_model, cross_validation, svm, metrics, grid_search, preprocessing
 from theano_test import LogisticRegression
 from neural_network import DNN
 
 def predict_submit(model, smpath, outpath, pmpath):
-    pmap = []
-    for line in open(pmpath):
-        x = line.strip('\n').split()
-        pmap.append(x[-1])
-
     X_submit, label_submit = read_data.read_feature(smpath, label=True)
-    Y_submit = model.predict(X_submit)
+    # Y_submit = model.predict(X_submit)
+    Y_submit = label_error.transform_label(model.predict(X_submit), pmpath)
     f = open(outpath, 'w')
     f.write('Id,Prediction\n')
     for i in range(len(label_submit)):
-        f.write(label_submit[i] + ',' + pmap[Y_submit[i]] + '\n')
+        f.write(label_submit[i] + ',' + Y_submit[i] + '\n')
     f.close()
 
 def main():
@@ -49,7 +46,7 @@ def main():
           {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
          ]
 
-    model = DNN([X.shape[1], 128, np.max(Y)+1])
+    model = DNN([X.shape[1], 200, 200, np.max(Y)+1])
     # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
     # model = linear_model.LogisticRegression()
@@ -59,10 +56,14 @@ def main():
 
     # print(Y_test, Y_pred)
 
-    Ain = 1 - metrics.zero_one_loss(Y_train, Y_tpred)
-    Atest = 1 - metrics.zero_one_loss(Y_test, Y_pred)
+    # Ain = 1 - metrics.zero_one_loss(Y_train, Y_tpred)
+    # Aval = 1 - metrics.zero_one_loss(Y_test, Y_pred)
+    pm = label_error.get_pmap()
+    print(metrics.classification_report(Y_train, Y_tpred, target_names=pm))
+    Ain = label_error.calc_accuracy(Y_train, Y_tpred)
+    Aval = label_error.calc_accuracy(Y_test, Y_pred)
     print('Ain = {0}'.format(Ain))
-    print('Atest = {0}'.format(Atest))
+    print('Aval = {0}'.format(Aval))
 
     predict_submit(model, submit_feature_path, 'test.csv', p48_39_path)
     
