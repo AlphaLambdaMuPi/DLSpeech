@@ -60,7 +60,7 @@ class DNN:
         self._L = len(self._Dims)
         self._x = T.matrix('x', config.floatX)
         self._y = T.matrix('y', config.floatX)
-        self._prob = 1.0
+        self._prob = 0.5
         self._p = shared(np.array(self._prob).astype(config.floatX))
         self._w = []
         self._b = []
@@ -74,7 +74,7 @@ class DNN:
             alp = self._Dims[i] ** 0.5
             self._w.append(shared(rng.randn(self._Dims[i], self._Dims[i+1]).astype(config.floatX) / alp))
             self._b.append(shared(rng.randn(self._Dims[i+1]).astype(config.floatX) / alp))
-            self._r.append(srng.binomial((self._Dims[i], ), p=self._p, dtype=config.floatX))
+            self._r.append(srng.binomial((self._Dims[i], self._Dims[i+1]), p=self._p, dtype=config.floatX))
             # self._penal += T.mean(self._w[i]**2)
             self._w_delta.append(shared(np.zeros((self._Dims[i], self._Dims[i+1])).astype(config.floatX)))
             self._b_delta.append(shared(np.zeros((self._Dims[i+1])).astype(config.floatX)))
@@ -83,8 +83,8 @@ class DNN:
             newl = self._l[i]
             neww = self._w[i]
             if i != 0:
-                newl = (self._l[i] * self._r[i]) # / (1 - self._p)
-                neww = self._w[i] * self._prob / self._p
+                # newl = (self._l[i] * self._r[i]) # / (1 - self._p)
+                neww = self._w[i] # * self._r[i] * self._prob / self._p
             if i == self._L-2:
                 layer = T.dot(newl, neww) + self._b[i]
             else:

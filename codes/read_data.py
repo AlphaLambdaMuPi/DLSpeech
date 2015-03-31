@@ -5,9 +5,11 @@ from sklearn import preprocessing
 def preproc(X):
     X1 = np.concatenate((X[1:,:], X[:1,:]), axis=0)
     X2 = np.concatenate((X[2:,:], X[:2,:]), axis=0)
+    X3 = np.concatenate((X[3:,:], X[:3,:]), axis=0)
     X_1 = np.concatenate((X[-1:,:], X[:-1,:]), axis=0)
     X_2 = np.concatenate((X[-2:,:], X[:-2,:]), axis=0)
-    return np.concatenate((X2, X1, X, X_1, X_2), axis=1)
+    X_3 = np.concatenate((X[-3:,:], X[:-3,:]), axis=0)
+    return np.concatenate((X3, X2, X1, X, X_1, X_2, X_3), axis=1)
     # return preprocessing.normalize(X)
 
 def read_label(path, pmpath, datasize=1E9):

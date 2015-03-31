@@ -20,7 +20,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
     # model = linear_model.LogisticRegression()
-    dims = [X_train.shape[1], 400, 300, np.max(Y_train)+1]
+    dims = [X_train.shape[1], 2000, 2000, 2000, np.max(Y_train)+1]
     param_grid = [
           {
               'Dims': [dims],
@@ -78,16 +78,16 @@ def main():
     # label_path = '../data/train_100000.lab'
     feature_path = orig_path + 'fbank/train.ark'
     label_path = orig_path + 'label/train_sorted.lab'
-    # submit_feature_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/fbank/test.ark'
-    submit_feature_path = '../data/train_100000.ark'
+    submit_feature_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/fbank/test.ark'
+    submit_feature_path_2 = '../data/train_100000.ark'
     # phone_map_path = '../data/phone_map'
     p48_39_path = '../data/48_39.map'
 
-    DATA_SIZE = 30000
+    DATA_SIZE = 3000000
     X = read_data.read_feature(feature_path, DATA_SIZE)
     Y = read_data.read_label(label_path, p48_39_path, DATA_SIZE)
-    # X = X[100000:,:]
-    # Y = Y[100000:]
+    X = X[100000:,:]
+    Y = Y[100000:]
 
     train_size = len(Y) * 0.5
     train_size = int(train_size)
@@ -112,7 +112,8 @@ def main():
 
     Aval, model = train_experiment(X_train, Y_train, X_test, Y_test, 2000)
 
-    predict_submit(model, submit_feature_path, 'test.csv', p48_39_path)
+    predict_submit(model, submit_feature_path, 'submit.csv', p48_39_path)
+    predict_submit(model, submit_feature_path_2, 'test.csv', p48_39_path)
     
     # orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
     # sort_label(orig_path + 'fbank/train.ark', orig_path + 'state_label/train.lab', 
