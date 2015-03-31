@@ -10,6 +10,7 @@ def sigmoid(x):
     # return 1 / (1 + T.exp(-x))
     # return x / (1 + T.abs_(x))
     return T.maximum(x, 0)
+    # return T.log(1+T.exp(x))
 
 x = T.dscalar('x')
 y = T.dscalar('y')
@@ -55,11 +56,16 @@ class DNN:
         self._Batchsize = Batchsize
 
         rng = np.random.RandomState()
+        srng = RandomStreams()
         self._L = len(self._Dims)
         self._x = T.matrix('x', config.floatX)
         self._y = T.matrix('y', config.floatX)
+        self._prob = 1.0
+        self._p = shared(np.array(self._prob).astype(config.floatX))
         self._w = []
         self._b = []
+        # self._penal = 0
+        self._r = []
         self._w_delta = []
         self._b_delta = []
         self._l = [self._x]
@@ -68,14 +74,21 @@ class DNN:
             alp = self._Dims[i] ** 0.5
             self._w.append(shared(rng.randn(self._Dims[i], self._Dims[i+1]).astype(config.floatX) / alp))
             self._b.append(shared(rng.randn(self._Dims[i+1]).astype(config.floatX) / alp))
+            self._r.append(srng.binomial((self._Dims[i], ), p=self._p, dtype=config.floatX))
+            # self._penal += T.mean(self._w[i]**2)
             self._w_delta.append(shared(np.zeros((self._Dims[i], self._Dims[i+1])).astype(config.floatX)))
             self._b_delta.append(shared(np.zeros((self._Dims[i+1])).astype(config.floatX)))
-            T.addbroadcast(self._b[i], 0)
+            # T.addbroadcast(self._b[i], 0)
         for i in range(self._L-1):
+            newl = self._l[i]
+            neww = self._w[i]
+            if i != 0:
+                newl = (self._l[i] * self._r[i]) # / (1 - self._p)
+                neww = self._w[i] * self._prob / self._p
             if i == self._L-2:
-                layer = T.dot(self._l[i], self._w[i]) + self._b[i]
+                layer = T.dot(newl, neww) + self._b[i]
             else:
-                layer = sigmoid(T.dot(self._l[i], self._w[i]) + self._b[i])
+                layer = sigmoid(T.dot(newl, neww) + self._b[i])
             self._l.append(layer)
         self._h = self._l[-1]
 
@@ -83,7 +96,7 @@ class DNN:
         dsm = T.sum(dotted, axis=1).dimshuffle(0, 'x')
         yln = self._y * T.log(dotted / dsm)
 
-        self._j = - (1 / self._x.shape[0]) * T.sum(yln)
+        self._j = - (1 / self._x.shape[0]) * T.sum(yln) # + 5 * self._penal
         self._j_grad_w = []
         self._j_grad_b = []
         for i in range(self._L-1):
@@ -91,8 +104,25 @@ class DNN:
             self._j_grad_b.append(T.grad(self._j, self._b[i]))
         self._eta = shared(np.asarray(0).astype(config.floatX))
 
-    def target_func(self):
-        return function([self._x, self._y], self._j)
+    def target_value(self, X, Y):
+        self._p.set_value(1)
+        jfunc = function([self._x, self._y], self._j)
+
+        N_test = X.shape[0]
+
+        Batch_size = 10000
+        Batch_num = (N_test + Batch_size - 1) // Batch_size
+
+        tot_j = 0
+        for i in range(Batch_num):
+            start = Batch_size * i
+            end = start + Batch_size
+            Xt = X[start:end,:]
+            Yt = Y[start:end]
+            tot_j += jfunc(Xt, Yt) * Xt.shape[0]
+
+        tot_j /= N_test
+        return tot_j
 
     def update_func(self, degrade_rate, min_eta, momentum):
         udlist = []
@@ -136,7 +166,6 @@ class DNN:
         momentum = self._Momentum
 
         self._eta.set_value(np.asarray(Eta).astype(config.floatX))
-        jfunc = self.target_func()
         ufunc = self.update_func(degrade_rate, min_eta, momentum)
         rfunc = self.realupdate_func()
 
@@ -146,7 +175,7 @@ class DNN:
         # x_shared = shared(X)
         # y_shared = shared(Y)
 
-        current_j = jfunc(X, Y)
+        current_j = self.target_value(X, Y)
         t0 = time.time()
         to_break = False
         for i in range(N_epoch * Batch_num):
@@ -156,11 +185,12 @@ class DNN:
                 b_end = b_start + Batch_size
                 X_mb = X[b_start:b_end,:]
                 Y_mb = Y[b_start:b_end,:]
+                self._p.set_value(self._prob)
                 ufunc(X_mb, Y_mb)
                 rfunc()
                 if Bno == Batch_num - 1:
                     Epoch += 1
-                    J = jfunc(X, Y)
+                    J = self.target_value(X, Y)
                     yp = self.predict(X)
                     Ain = label_error.calc_accuracy(YY, yp)
                     yp_t = self.predict(X_t)
@@ -196,11 +226,21 @@ class DNN:
         return self
 
     def predict(self, X):
+        self._p.set_value(1)
         X = X.astype(config.floatX)
         N_test = X.shape[0]
 
+        Batch_size = 10000
+        Batch_num = (N_test + Batch_size - 1) // Batch_size
+
         pfunc = self.predict_func()
-        yp = pfunc(X)
+        yps = []
+        for i in range(Batch_num):
+            start = Batch_size * i
+            end = start + Batch_size
+            yps.append(pfunc(X[start:end,:]))
+
+        yp = np.concatenate(yps)
 
         # newm = np.zeros(yp.shape)
         # for i in range(N_test):

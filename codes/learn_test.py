@@ -20,7 +20,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
     # model = linear_model.LogisticRegression()
-    dims = [X_train.shape[1], 200, 200, 200, 200, 200, np.max(Y_train)+1]
+    dims = [X_train.shape[1], 400, 300, np.max(Y_train)+1]
     param_grid = [
           {
               'Dims': [dims],
@@ -51,7 +51,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
 
     model = DNN(
         dims,
-        Eta = 0.002, Drate = 0.9999, Minrate = 0.2, Momentum = 0.9, 
+        Eta = 0.002, Drate = 0.99998, Minrate = 0.2, Momentum = 0.9, 
         Batchsize = 128
     )
 
@@ -78,20 +78,28 @@ def main():
     # label_path = '../data/train_100000.lab'
     feature_path = orig_path + 'fbank/train.ark'
     label_path = orig_path + 'label/train_sorted.lab'
-    submit_feature_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/fbank/test.ark'
-    phone_map_path = '../data/phone_map'
+    # submit_feature_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/fbank/test.ark'
+    submit_feature_path = '../data/train_100000.ark'
+    # phone_map_path = '../data/phone_map'
     p48_39_path = '../data/48_39.map'
 
-    DATA_SIZE = 200000
+    DATA_SIZE = 30000
     X = read_data.read_feature(feature_path, DATA_SIZE)
     Y = read_data.read_label(label_path, p48_39_path, DATA_SIZE)
+    # X = X[100000:,:]
+    # Y = Y[100000:]
 
-    perm = np.random.permutation(X.shape[0])
+    train_size = len(Y) * 0.5
+    train_size = int(train_size)
+
+
+    perm = np.random.permutation(train_size)
+    perm = np.concatenate((perm, list(range(train_size,len(Y)))))
     X = X[perm,:]
     Y = Y[perm]
 
-    train_size = len(Y) * 0.9
-    train_size = int(train_size)
+    print(X.shape, Y.shape)
+
 
     X_train = X[:train_size,:]
     X_test = X[train_size:,:]

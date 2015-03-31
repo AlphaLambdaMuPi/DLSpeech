@@ -3,8 +3,12 @@ import label_error
 from sklearn import preprocessing
 
 def preproc(X):
-    return X
-    return preprocessing.normalize(X)
+    X1 = np.concatenate((X[1:,:], X[:1,:]), axis=0)
+    X2 = np.concatenate((X[2:,:], X[:2,:]), axis=0)
+    X_1 = np.concatenate((X[-1:,:], X[:-1,:]), axis=0)
+    X_2 = np.concatenate((X[-2:,:], X[:-2,:]), axis=0)
+    return np.concatenate((X2, X1, X, X_1, X_2), axis=1)
+    # return preprocessing.normalize(X)
 
 def read_label(path, pmpath, datasize=1E9):
     pmap = {}
@@ -32,7 +36,11 @@ def read_feature(path, datasize=1E9, label=False):
     data_count = 0
     for line in open(path):
         ln = line.strip('\n').split()
-        x = [float(a) for a in ln[1:]]
+        if ln[0] == 'f':
+            alpha = 1.0
+        else:
+            alpha = -1.0
+        x = [alpha] + [float(a) for a in ln[1:]]
         arr.append(x)
         if label:
             lab.append(ln[0])
@@ -41,9 +49,11 @@ def read_feature(path, datasize=1E9, label=False):
             break
 
     print('Feature readed : {0}'.format(data_count))
+
+    ret = preproc(np.array(arr))
     if label:
-        return np.array(arr), lab
-    return preproc(np.array(arr))
+        return ret, lab
+    return ret
 
 def sort_label(fpath, lpath, newlpath):
     names = []
