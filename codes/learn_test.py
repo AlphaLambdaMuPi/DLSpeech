@@ -83,7 +83,7 @@ def main():
     # phone_map_path = '../data/phone_map'
     p48_39_path = '../data/48_39.map'
 
-    DATA_SIZE = 3000000
+    DATA_SIZE = 300000
     X = read_data.read_feature(feature_path, DATA_SIZE)
     Y = read_data.read_label(label_path, p48_39_path, DATA_SIZE)
     X = X[100000:,:]
