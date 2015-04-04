@@ -1,2 +1,4 @@
 codes/__pycache__
 *.pyc
+result/
+raw_data/

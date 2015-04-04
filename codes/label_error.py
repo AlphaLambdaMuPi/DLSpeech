@@ -1,8 +1,7 @@
 import numpy as np
+from settings import *
 
-pirho = '../data/48_39.map'
-
-def transform_label(Y, pmpath=pirho):
+def transform_label(Y, pmpath=P48_39_PATH):
     pmap = []
     f = open(pmpath)
     for line in f:
@@ -14,7 +13,7 @@ def transform_label(Y, pmpath=pirho):
         Ys.append(pmap[i])
     return np.array(Ys)
 
-def get_pmap(pmpath=pirho):
+def get_pmap(pmpath=P48_39_PATH):
     pmap = []
     f = open(pmpath)
     for line in f:
