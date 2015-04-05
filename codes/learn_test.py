@@ -82,6 +82,7 @@ def main():
     DATA_SIZE = 300000
     X = read_data.read_feature(FEATURE_PATH, DATA_SIZE)
     Y = read_data.read_label(LABEL_PATH, P48_39_PATH, DATA_SIZE)
+    print(type(X))
     X = X[:,:]
     Y = Y[:]
     

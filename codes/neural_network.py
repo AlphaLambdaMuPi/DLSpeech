@@ -5,6 +5,8 @@ from theano.tensor.shared_randomstreams import RandomStreams
 from theano.printing import debugprint
 import label_error
 import time
+import matplotlib.pyplot as plt
+plt.ion()
 
 def sigmoid(x):
     # return 1 / (1 + T.exp(-x))
@@ -104,6 +106,25 @@ class DNN:
             self._j_grad_b.append(T.grad(self._j, self._b[i]))
         self._eta = shared(np.asarray(0).astype(config.floatX))
 
+        self.plt_init()
+
+    def plt_init(self):
+        self.figure, self.ax = plt.subplots()
+        self.line_ain, = self.ax.plot([], [], '-o')
+        self.line_aval, = self.ax.plot([], [], '-o')
+        self.ax.set_autoscaley_on(True)
+        self.ax.grid()
+
+    def plt_refresh(self, x, ain, aval):
+        self.line_ain.set_xdata(np.append(self.line_ain.get_xdata(), x))
+        self.line_ain.set_ydata(np.append(self.line_ain.get_ydata(), ain))
+        self.line_aval.set_xdata(np.append(self.line_aval.get_xdata(), x))
+        self.line_aval.set_ydata(np.append(self.line_aval.get_ydata(), aval))
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.figure.canvas.draw()
+        self.figure.canvas.flush_events()
+
     def target_value(self, X, Y):
         self._p.set_value(1)
         jfunc = function([self._x, self._y], self._j)
@@ -198,6 +219,7 @@ class DNN:
                     print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}, \tAin = {4:.4f}, \tAval = {5:.4f}'.format(
                         Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()), Ain, Aval)
                     )
+                    self.plt_refresh(Epoch, Ain, Aval)
                     t0 = time.time()
 
                     # new_eta = self._eta.get_value()
