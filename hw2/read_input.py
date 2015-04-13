@@ -3,15 +3,15 @@ import logging
 import re
 logger = logging.getLogger()
 
-def read_feature(max_lines = 10**10):
+def read_feature(max_lines = 10**3):
 
     cnt = 0
     feature = []
     with open(DATA_PATH['fbank']) as f:
-        for lines in f:
-            line = f.readline()
+        for line in f:
+            line = line.rstrip('\n')
             datas = line.split()
-            if not len(datas): break
+            datas = datas[0:1] + list(map(float, datas[1:]))
             feature.append(datas)
             cnt += 1
             if cnt >= max_lines:
@@ -44,17 +44,17 @@ def feature_group(name):
     match = regex.fullmatch(name)
     return match.group(1), int(match.group(2))
 
-def read_label(max_lines = 10**10):
+def read_label(max_lines = 400000):
 
     cnt = 0
     res = []
     with open(DATA_PATH['label']) as f:
-        for lines in f:
-            line = f.readline()
-            line = line.rstrip()
-            if not line.strip(): break
+        for line in f:
+            line = line.rstrip('\n')
             datas = line.split(',')
             res.append(datas)
+            if len(datas) != 2:
+                raise ValueError('zz')
             cnt += 1
             if cnt >= max_lines:
                 break
@@ -74,10 +74,11 @@ def read_label_dict():
 def read_map():
     res = {}
     with open(DATA_PATH['48_idx_chr']) as f:
-        for lines in f:
-            line = f.readline()
+        for line in f:
+            line = line.rstrip('\n')
             datas = line.split()
-            res[datas[0]] = datas[1], datas[2]
+            print(datas[0])
+            res[datas[0]] = int(datas[1]), datas[2]
 
     return res
 
