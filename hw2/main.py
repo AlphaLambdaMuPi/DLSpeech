@@ -2,7 +2,7 @@ import logging, logging.handlers
 import sys
 from settings import *
 from check_file import check_file
-from read_input import read_feature_by_groups, read_label_dict
+from read_input import read_feature_by_groups, read_label_dict, read_map
 
 
 def main():
@@ -11,7 +11,7 @@ def main():
     ft = read_feature_by_groups()
     lb = read_label_dict()
     mp = read_map()
-    res = get_psi()
+    res = get_psi(ft, lb, mp)
     print(res)
 
 def get_psi(ft, lb, mp):
@@ -28,9 +28,9 @@ def get_psi(ft, lb, mp):
     def trans_id(a, b):
         return PHONES * FBANKS + label_id(a) * PHONES + label_id(b)
 
-    name = 'faem0_sil1392'
+    name = 'faem0_si1392'
     data = ft[name]
-    for i in range(data):
+    for i in range(len(data)):
         frame_id = data[i][0]
         lid = label_id(lb[name, frame_id])
         for j in range(FBANKS):
@@ -40,7 +40,6 @@ def get_psi(ft, lb, mp):
             res[trans_id(lid, label_id(lb[name, frame_id]))] += 1.0
 
     return res
-        
 
 if __name__ == '__main__':
     main()

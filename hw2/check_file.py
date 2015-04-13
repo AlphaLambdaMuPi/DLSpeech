@@ -15,7 +15,11 @@ def check_file():
         with tarfile.open(TAR_FILE) as tar:
             data_dir = os.path.dirname(__file__)
             tar.extractall(path=DATA_DIR)
-    except:
+    except OSError:
         logger.error('File {} not found, please download' 
                 'from kaggle and extract it here'.format(os.path.abspath(TAR_FILE)))
+    except Exception as e:
+        logger.error('Fatal Error.... {}'.format(e))
+
+    logger.info('Data Extract Complete!')
 

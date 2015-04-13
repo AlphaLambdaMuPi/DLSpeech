@@ -219,7 +219,7 @@ class DNN:
                     print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}, \tAin = {4:.4f}, \tAval = {5:.4f}'.format(
                         Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()), Ain, Aval)
                     )
-                    self.plt_refresh(Epoch, Ain, Aval)
+                    #TODO self.plt_refresh(Epoch, Ain, Aval)
                     t0 = time.time()
 
                     # new_eta = self._eta.get_value()
