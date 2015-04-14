@@ -7,11 +7,11 @@ import imp
 svmapi = imp.load_dynamic('svmapi',
    '/scratch/step5/chroot/usr/lib/python3.4/site-packages/svmapi.cpython-34.so')
 
-import logging, logging.handlers
-import sys
-from settings import *
-from check_file import check_file
-from read_input import read_feature_by_groups, read_label_dict, read_map
+#import logging, logging.handlers
+#import sys
+#from settings import *
+#from check_file import check_file
+#from read_input import read_feature_by_groups, read_label_dict, read_map
 
 
 def parse_parameters(sparm):
@@ -52,8 +52,21 @@ def read_examples(filename, sparm):
     # problem for learning.  The correct hypothesis would obviously
     # tend to have a positive weight for the first feature, and a
     # negative weight for the 4th feature.
-    return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
-            ([0,0,1,1],-1), ([1,0,0,0], 1), ([0,0,0,1],-1)]
+
+    from random import random, randint
+    ll = 400
+    d = []
+    for i in range(ll):
+        f = -1 if random() < 0.5 else 1
+        ls = [random() * 20 + 80 for i in range(100)] if f == 1 else [
+              random() * 20 for i in range(100)]
+        #f = -1 if ls[0] > 50 else 1
+        pr = ls, f
+        d.append(pr)
+    print(d)
+    return d   
+    #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
+    #        ([0,0,1,1],-1), ([1,0,0,0], 1), ([0,0,0,1],-1)]
 
 def init_model(sample, sm, sparm):
     """Initializes the learning model.
@@ -224,7 +237,9 @@ def print_learning_stats(sample, sm, cset, alpha, sparm):
     print('Model learned:', end=' ')
     print('[',', '.join(['%g'%i for i in sm.w]),']')
     print('Losses:', end=' ')
-    print([loss(y, classify_example(x, sm, sparm), sparm) for x,y in sample])
+    ls = [loss(y, classify_example(x, sm, sparm), sparm) for x,y in sample]
+    print(ls)
+    print('Total losses: {}'.format(sum(ls)))
 
 def print_testing_stats(sample, sm, sparm, teststats):
     """Print statistics once classification has finished.
