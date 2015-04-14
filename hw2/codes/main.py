@@ -4,7 +4,6 @@ from settings import *
 from check_file import check_file
 from read_input import read_feature_by_groups, read_label_dict, read_map
 
-
 def main():
     init_log_settings()
     check_file()
