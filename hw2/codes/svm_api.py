@@ -2,16 +2,17 @@
 # Thomas Finley, tfinley@gmail.com
 
 import os, sys
+import svmapi
 sys.path.insert(0, os.path.join(os.getcwd(), '../codes'))
-import imp
-svmapi = imp.load_dynamic('svmapi',
-   '/scratch/step5/chroot/usr/lib/python3.4/site-packages/svmapi.cpython-34.so')
+# import imp
+# svmapi = imp.load_dynamic('svmapi',
+   # '/scratch/step5/chroot/usr/lib/python3.4/site-packages/svmapi.cpython-34.so')
 
-#import logging, logging.handlers
-#import sys
-#from settings import *
-#from check_file import check_file
-#from read_input import read_feature_by_groups, read_label_dict, read_map
+import logging, logging.handlers
+import sys
+from settings import *
+from check_file import check_file
+from read_input import read_feature_by_groups, read_label_dict, read_map
 
 
 def parse_parameters(sparm):

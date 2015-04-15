@@ -95,8 +95,8 @@ static void api_load_module(int argc, char* argv[]) {
   nstrws_dispose(argc, argvv);
 
   // Load the extension module.
-  PyInit_svmapi();
-  pExtModule = PyImport_AddModule(SVMAPINAME);
+  /* PyInit_svmapi(); */
+  /* pExtModule = PyImport_AddModule(SVMAPINAME); */
   
   // Get the name of the module.
   // First try the --m option...
