@@ -78,7 +78,7 @@ int main (int argc, char* argv[])
     printf("Classifying test examples.."); fflush(stdout);
   }
 
-  if ((predfl = fopen (predictionsfile, "w")) == NULL)
+  if ((predfl = fopen (predictionsfile, "w+")) == NULL)
   { perror (predictionsfile); exit (1); }
 
   for(i=0;i<testsample.n;i++) {

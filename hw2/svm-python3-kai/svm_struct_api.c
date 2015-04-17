@@ -705,10 +705,14 @@ void        write_label(FILE *fp, LABEL y) {
   PyObject *pFunc, *pValue, *pArgs;
   // Call the relevant Python function.
   pFunc = getFunction(PYTHON_WRITE_LABEL);
-  pArgs = Py_BuildValue
-    ("NO", PyFile_FromFd(fp, "foobar", "w", -1, NULL, NULL, NULL, dummy_file_closer), y.py_y);
-  pValue = PyObject_CallObject(pFunc, pArgs);
-  Py_DECREF(pArgs);
+  /* pArgs = Py_BuildValue */
+    /* ("NO", NULL, y.py_y); */
+    /* ("NO", PyFile_FromFd(fp, "foobar", "w", -1, NULL, NULL, NULL, dummy_file_closer), y.py_y); */
+  /* pValue = PyObject_CallObject(pFunc, pArgs); */
+  /* pValue = PyObject_CallFunction(pFunc, "NO", PyFile_FromFd(fp, -1, "w+", -1, NULL, NULL, NULL, dummy_file_closer), y.py_y); */
+  pValue = PyObject_CallFunction(pFunc, "O", y.py_y);
+  /* Py_XDECREF(pArgs); */
+  /* PyObject_DEL(pArgs); */
   PY_RUNCHECK;
   Py_DECREF(pValue);
 } 

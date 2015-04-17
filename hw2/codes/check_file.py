@@ -39,20 +39,21 @@ def check_file():
 
         logger.info('Data Extract Complete!')
 
-def load_shelve():
+def load_shelve(test=False):
+    SFN = SHELVE_FILE_NAME
     try:
         logger.debug('Start open shelve')
-        with shelve.open(SHELVE_FILE_NAME, 'r') as d:
+        with shelve.open(SFN, 'r') as d:
             res = d['names']
             logger.info('Shelve has {} group datas'.format(len(res)))
     except Exception as e:
         
-        shelve_parent = os.path.dirname(SHELVE_FILE_NAME)
+        shelve_parent = os.path.dirname(SFN)
         if not os.path.isdir(shelve_parent):
             logger.info('Make dir %s', shelve_parent)
             os.makedirs(shelve_parent)
 
-        with shelve.open(SHELVE_FILE_NAME, 'c') as d:
+        with shelve.open(SFN, 'c') as d:
             logger.warning('shelve broken or not built, rebuilding...')
             dt = read_feature_label()
             name_list = []

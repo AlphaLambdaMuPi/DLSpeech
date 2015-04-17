@@ -15,12 +15,14 @@ import sys
 from settings import *
 from main import init
 from check_file import check_file
-from read_input import read_train_datas, read_map, read_models
+from read_input import read_train_datas, read_map, read_models, read_tmodels
 from utils import varpsi, answer, delta
 
 phomap = read_map()
 labels = list(phomap.keys())
 label_list = [''] * 48
+builtin_llabels = []
+builtin_loutputs = []
 
 for i in phomap:
     label_list[phomap[i][0]] = i
@@ -67,7 +69,10 @@ def read_examples(filename, sparm):
 
     from random import random, randint
     init()
-    d = read_models(2)
+    d = read_models(5000)
+    # bll, d = read_tmodels(3000)
+    # global builtin_llabels
+    # builtin_llabels = bll
     #print(d)
     return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
@@ -198,6 +203,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
     risk bound condition, but without any regularization."""
     # return ['aa'] * (len(x) // 69)
 
+
     ql = list(sm.w)
     obs = np.array(ql[:69*48]).reshape((48, 69))
     trans = np.array(ql[69*48:]).reshape((48, 48))
@@ -221,7 +227,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
         alpha = alpha.astype(float)
         beta = beta.astype(float)
 
-        p = lgprob + trans + xxt[i,:] + 0 * alpha + beta - 1 * gamma
+        p = lgprob + trans + xxt[i,:] + 1 * alpha + beta - 2 * gamma
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((48,1))
@@ -324,13 +330,13 @@ def loss(y, ybar, sparm=None):
         alpha = (y[i] != yl)
         beta = (ybar[i] != ybl)
         if alpha:
-            cnt += 0
+            cnt += 1
             yl = y[i]
         if beta:
             cnt += 1
             ybl = ybar[i]
         if (alpha or beta) and (y[i] == ybar[i]):
-            cnt -= 1
+            cnt -= 2
     return cnt
 
     # cnt = 0
@@ -401,6 +407,22 @@ def print_testing_stats(sample, sm, sparm, teststats):
 
     The default behavior is that nothing is printed."""
     print(teststats)
+    yp = [classify_example(x, sm, sparm) for x, y in sample]
+    yy = [y for x, y in sample]
+    ls2 = [loss2(y, yb) for y, yb in zip(yy, yp)]
+    avgls2 = sum(ls2) / len(ls2)
+    avglen = sum(len(answer(y)) for x, y in sample) / len(ls2)
+    for yn, yc, lm in zip(yp, yy, ls2):
+        print(answer(yn), '/', lm)
+        print(answer(yc))
+
+    print('Levenshtein losses: {} / {}'.format(avgls2, avglen))
+
+    f = open('pred.out', 'w')
+    f.write('id,phone_sequence\n')
+    for i, j in zip(builtin_llabels, builtin_loutputs):
+        f.write(i + ',' + j + '\n')
+    f.close()
 
 def eval_prediction(exnum, xxx_todo_changeme, ypred, sm, sparm, teststats):
     """Accumulate statistics about a single training example.
@@ -416,7 +438,7 @@ def eval_prediction(exnum, xxx_todo_changeme, ypred, sm, sparm, teststats):
     default behavior is that the function does nothing."""
     (x, y) = xxx_todo_changeme
     if exnum==0: teststats = []
-    print('on example',exnum,'predicted',ypred,'where correct is',y)
+    # print('on example',exnum,'predicted',ypred,'where correct is',y)
     teststats.append(loss(y, ypred, sparm))
     return teststats
 
@@ -443,7 +465,7 @@ def read_model(filename, sparm):
     import pickle, bz2
     return pickle.load(bz2.BZ2File(filename))
 
-def write_label(fileptr, y):
+def write_label(y):
     """Write a predicted label to an open file.
 
     Called during classification, this function is called for every
@@ -452,7 +474,9 @@ def write_label(fileptr, y):
     object is a file, not a string.  Attempts to close the file are
     ignored.)  The default behavior is equivalent to
     'print>>fileptr,y'"""
-    print(y, file=fileptr)
+
+    ans = answer(y)
+    builtin_loutputs.append(ans)
 
 def print_help():
     """Help printed for badly formed CL-arguments when learning.

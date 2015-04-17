@@ -4,6 +4,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT_DIR, '../data')
 LOG_FILE_NAME = os.path.join(ROOT_DIR, 'log/hw2.log')
 SHELVE_FILE_NAME = os.path.join(ROOT_DIR, 'shelve/train')
+SHELVE_TEST_FILE_NAME = os.path.join(ROOT_DIR, 'shelve/test')
 LOG_LEVEL = logging.DEBUG
 TAR_FILE = os.path.join(ROOT_DIR, 'hw2.tgz')
 
@@ -17,7 +18,7 @@ def init_log_settings():
 
     log_parent = os.path.dirname(LOG_FILE_NAME)
     if not os.path.isdir(log_parent):
-        logger.info('Make dir %s', log_parent)
+        # logger.info('Make dir %s', log_parent)
         os.makedirs(log_parent)
 
     rotator = logging.handlers.RotatingFileHandler(

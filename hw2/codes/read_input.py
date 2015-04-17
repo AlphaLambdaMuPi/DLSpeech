@@ -81,7 +81,7 @@ def read_label_dict():
 
     return res
 
-def read_feature_label():
+def read_feature_label(test=False):
     fe = read_feature_by_group()
     la = read_label_dict()
     res = {}
@@ -106,7 +106,6 @@ def read_train_datas(count = 100):
         data = d['names']
         for i in range(min(count, len(data))):
             rt.append((data[i], d[data[i]]))
-
     return rt
 
 def read_train_datas_by_name(name):
@@ -151,3 +150,35 @@ def read_models(count = 100):
         res.append((X, Y))
     return res
     
+def read_tmodels(count = 100):
+    f = open(DATA_PATH['test'])
+    mp = read_map()
+    res = []
+    X = []
+    Y = []
+    labs = []
+    lastlab = ''
+
+    cnt = 0
+    for line in f:
+        aa = line.strip('\n').split()
+        lb = aa[0]
+        stl = len(lb.split('_')[-1])
+        lb_pre = lb[:-stl-1]
+        if lb_pre != lastlab:
+            if cnt >= count:
+                break
+            cnt += 1
+            if lastlab != '':
+                res.append((X, Y))
+            lastlab = lb_pre
+            labs.append(lb_pre)
+            X = []
+            Y = []
+        feat = [float(i) for i in aa[1:]]
+        X.extend(feat)
+        Y.append('aa')
+    res.append((X, Y))
+
+    f.close()
+    return labs, res

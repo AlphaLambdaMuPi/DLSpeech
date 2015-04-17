@@ -9,7 +9,7 @@ import re
 def init():
     init_log_settings()
     check_file()
-    load_shelve()
+    load_shelve(True)
 
 def main():
     init()
