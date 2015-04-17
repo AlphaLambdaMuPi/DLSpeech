@@ -12,7 +12,7 @@ import logging, logging.handlers
 import sys
 from settings import *
 from check_file import check_file
-from read_input import read_feature_by_groups, read_label_dict, read_map
+from read_input import read_feature_by_group, read_label_dict, read_map
 
 
 def parse_parameters(sparm):
@@ -219,6 +219,7 @@ def print_iteration_stats(ceps, cached_constraint, sample, sm,
     
     The default behavior is that nothing is printed."""
     print()
+    print("A\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 def print_learning_stats(sample, sm, cset, alpha, sparm):
     """Print statistics once learning has finished.

@@ -1,4 +1,8 @@
-codes/__pycache__
-*.pyc
-result/
-raw_data/
+__pycache__
+log/
+data/
+tags
+*.tgz
+*.o
+
+

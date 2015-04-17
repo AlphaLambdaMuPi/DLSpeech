@@ -1,9 +1,10 @@
 from settings import *
 import logging
 import re
+import shelve
 logger = logging.getLogger()
 
-def read_feature(max_lines = 10**3):
+def read_feature(max_lines = 10**10):
 
     cnt = 0
     feature = []
@@ -21,7 +22,13 @@ def read_feature(max_lines = 10**3):
 
     return feature
 
-def read_feature_by_groups():
+def read_feature_by_group():
+    '''
+        res[group_name] = [
+         (1, [fbanks features]),
+         (2, [fbanks features]),...
+     ]
+     '''
 
     fe = read_feature()
     nid = 0
@@ -31,8 +38,8 @@ def read_feature_by_groups():
         cur_name, __ = feature_group(fe[nid][0])
         i = nid
         while i < len(fe) and cur_name == feature_group(fe[i][0])[0]:
-            ls = [feature_group(fe[i][0])[1]] + fe[i][1:]
-            gr.append(ls)
+            pr = (feature_group(fe[i][0])[1] , fe[i][1:])
+            gr.append(pr)
             i += 1
         res[cur_name] = gr
         nid = i
@@ -44,7 +51,7 @@ def feature_group(name):
     match = regex.fullmatch(name)
     return match.group(1), int(match.group(2))
 
-def read_label(max_lines = 400000):
+def read_label(max_lines = 10**10):
 
     cnt = 0
     res = []
@@ -63,6 +70,9 @@ def read_label(max_lines = 400000):
     return res
 
 def read_label_dict():
+    '''
+        res[(name, id)] = ans
+    '''
     ls = read_label()
     res = {}
     for data in ls:
@@ -70,16 +80,57 @@ def read_label_dict():
         res[pr] = data[1]
 
     return res
+
+def read_feature_label():
+    fe = read_feature_by_group()
+    la = read_label_dict()
+    res = {}
+
+    for k, v in fe.items():
+        res[k] = []
+        for x in v:
+            fid = x[0]
+            ans = la[k, fid]
+            dt = (x[0], x[1], ans)
+            res[k].append(dt)
+
+    return res
+
+def read_train_datas(count = 100):
+    '''
+        The prefered way to get train data...
+        Total groups is about 3xxx (count = 100 ~ 3%)
+    '''
+    rt = []
+    with shelve.open(SHELVE_FILE_NAME, 'r') as d:
+        data = d['names']
+        for i in range(min(count, len(data))):
+            rt.append((data[i], d[data[i]]))
+
+    return rt
+
+def read_train_datas_by_name(name):
+    '''
+        The prefered way to get train data...
+        Total groups is about 3xxx (count = 100 ~ 3%)
+    '''
+    with shelve.open(SHELVE_FILE_NAME, 'r') as d:
+        rt = d[name]
+
+    return rt
+
     
 def read_map():
+    '''
+        format: res['<phone>'] = (id, answer_char)
+    '''
     res = {}
     with open(DATA_PATH['48_idx_chr']) as f:
         for line in f:
             line = line.rstrip('\n')
             datas = line.split()
-            print(datas[0])
             res[datas[0]] = int(datas[1]), datas[2]
-
+    logger.info('Read map done ... ')
     return res
 
 
