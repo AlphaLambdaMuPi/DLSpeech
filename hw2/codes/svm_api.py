@@ -67,7 +67,7 @@ def read_examples(filename, sparm):
 
     from random import random, randint
     init()
-    d = read_models(3)
+    d = read_models(2)
     #print(d)
     return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
@@ -177,7 +177,7 @@ def classify_example(x, sm, sparm):
     y = y[::-1]
     y = [label_list[i] for i in y]
 
-    print(answer(y))
+    # print(answer(y))
     return y
 
 def find_most_violated_constraint(x, y, sm, sparm):
@@ -211,9 +211,17 @@ def find_most_violated_constraint(x, y, sm, sparm):
     lst = []
 
     for i in range(LEN):
-        ylab = np.ones((1,48))
-        ylab[0,phomap[y[i]][0]] = 0
-        p = lgprob + trans + xxt[i,:] + ylab
+        # ylab = np.ones((1,48))
+        # ylab[0,phomap[y[i]][0]] = 0
+        alpha = np.array((i == 0) or (y[i] != y[i-1]))
+        beta = (~np.identity(48, dtype=bool)) | (i == 0)
+        gamma = np.zeros((1,48))
+        gamma[0,phomap[y[i]][0]] = 1
+        gamma = gamma * (alpha | beta)
+        alpha = alpha.astype(float)
+        beta = beta.astype(float)
+
+        p = lgprob + trans + xxt[i,:] + 0 * alpha + beta - 1 * gamma
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((48,1))
@@ -284,6 +292,7 @@ def psi(x, y, sm=None, sparm=None):
     # In the case of binary classification, psi is just the class (+1
     # or -1) times the feature vector for x, including that special
     # constant bias feature we pretend that we have.
+
     import svmapi
     
     thePsi = varpsi(x, y, phomap)
@@ -309,15 +318,32 @@ def loss(y, ybar, sparm=None):
     # If they're the same sign, then the loss should be 0.
 
     cnt = 0
+    yl = ''
+    ybl = ''
     for i in range(len(y)):
-        if y[i] != ybar[i]:
+        alpha = (y[i] != yl)
+        beta = (ybar[i] != ybl)
+        if alpha:
+            cnt += 0
+            yl = y[i]
+        if beta:
             cnt += 1
+            ybl = ybar[i]
+        if (alpha or beta) and (y[i] == ybar[i]):
+            cnt -= 1
     return cnt
-    a1 = answer(y)
-    a2 = answer(ybar)
-    # print(a1)
-    # print(a2)
-    return delta(a1, a2)
+
+    # cnt = 0
+    # for i in range(len(y)):
+        # if y[i] != ybar[i]:
+            # cnt += 1
+    # return cnt
+
+    # a1 = answer(y)
+    # a2 = answer(ybar)
+    # # print(a1)
+    # # print(a2)
+    # return delta(a1, a2)
 
 def print_iteration_stats(ceps, cached_constraint, sample, sm,
                           cset, alpha, sparm):
@@ -347,18 +373,24 @@ def print_learning_stats(sample, sm, cset, alpha, sparm):
     constraint.
 
     The default behavior is that nothing is printed."""
-    print('Model learned:', end=' ')
-    print('[',', '.join(['%g'%i for i in sm.w]),']')
-    print('Losses:', end=' ')
+    # print('Model learned:', end=' ')
+    # print('[',', '.join(['%g'%i for i in sm.w]),']')
+    print('Losses:')
     yp = [classify_example(x, sm, sparm) for x, y in sample]
     yy = [y for x, y in sample]
     ls = [loss(y, yb, sparm) for y, yb in zip(yy, yp)]
     ls2 = [loss2(y, yb) for y, yb in zip(yy, yp)]
     avgls = sum(ls) / len(ls)
     avgls2 = sum(ls2) / len(ls2)
-    avglen = sum(len(answer(y)) for x,y in sample) / len(ls)
-    print(ls)
-    print('Average losses: {} ({}) / {}'.format(avgls, avgls2, avglen))
+    avglen = sum(len(answer(y)) for x, y in sample) / len(ls)
+    avglen2 = sum(len(y) for x, y in sample) / len(ls2)
+    # print(ls)
+    for yn, yc, lm in zip(yp, yy, ls):
+        print(answer(yn), '/', lm)
+        print(answer(yc))
+
+    print('Average losses: {} (Lev {}) / {}'.format(
+        avgls, avgls2, avglen))
 
 def print_testing_stats(sample, sm, sparm, teststats):
     """Print statistics once classification has finished.

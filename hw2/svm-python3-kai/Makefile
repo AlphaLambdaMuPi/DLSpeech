@@ -8,9 +8,9 @@ LD = gcc
 #LD = attolcc -mempro -perfpro -block -proc -- gcc
 CFLAGS = -O3 -fomit-frame-pointer -ffast-math -Wall 
 LDFLAGS = -O3 -lm -Wall
-CFLAGS = -g -Wall
-LDFLAGS = -g -lm
-CFLAGS = -g
+# CFLAGS = -g -Wall
+# LDFLAGS = -g -lm
+# CFLAGS = -g
 #CFLAGS = -pg -Wall
 #LDFLAGS = -pg -lm -Wall 
 
