@@ -120,10 +120,12 @@ def read_train_datas_by_name(name):
     return rt
 
     
+mpres = {}
 def read_map():
     '''
         format: res['<phone>'] = (id, answer_char)
     '''
+    if mpres: return mpres
     res = {}
     with open(DATA_PATH['48_idx_chr']) as f:
         for line in f:
@@ -131,6 +133,21 @@ def read_map():
             datas = line.split()
             res[datas[0]] = int(datas[1]), datas[2]
     logger.info('Read map done ... ')
+    global mpres
+    mpres = res
+    return mpres
+
+def read_models(count = 100):
+    d = read_train_datas(count)
+    mp = read_map()
+    res = []
+    for p in d:
+        ls = p[1]
+        X = []
+        Y = []
+        for i in range(len(ls)):
+            X.extend(ls[i][1])
+            Y.append(ls[i][2])
+        res.append((X, Y))
     return res
-
-
+    

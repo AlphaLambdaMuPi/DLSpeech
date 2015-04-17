@@ -8,12 +8,22 @@ sys.path.insert(0, os.path.join(os.getcwd(), '../codes'))
 # svmapi = imp.load_dynamic('svmapi',
    # '/scratch/step5/chroot/usr/lib/python3.4/site-packages/svmapi.cpython-34.so')
 
+import numpy as np
+import random
 import logging, logging.handlers
 import sys
 from settings import *
+from main import init
 from check_file import check_file
-from read_input import read_feature_by_group, read_label_dict, read_map
+from read_input import read_train_datas, read_map, read_models
+from utils import varpsi, answer, delta
 
+phomap = read_map()
+labels = list(phomap.keys())
+label_list = [''] * 48
+
+for i in phomap:
+    label_list[phomap[i][0]] = i
 
 def parse_parameters(sparm):
     """Sets attributes of sparm based on command line arguments.
@@ -31,6 +41,7 @@ def parse_parameters_classify(attribute, value):
     """Process a single custom command line argument for the classifier.
 
     This gives the user code a chance to change the state of the
+    A
     classifier based on a single custom command line argument, e.g.,
     one that begins with two dashes.  This function will be called
     multiple times if there are multiple custom command line
@@ -42,7 +53,7 @@ def parse_parameters_classify(attribute, value):
 
 def read_examples(filename, sparm):
     """Reads and returns x,y example pairs from a file.
-    
+
     This reads the examples contained at the file at path filename and
     returns them as a sequence.  Each element of the sequence should
     be an object 'e' where e[0] and e[1] is the pattern (x) and label
@@ -55,23 +66,16 @@ def read_examples(filename, sparm):
     # negative weight for the 4th feature.
 
     from random import random, randint
-    ll = 400
-    d = []
-    for i in range(ll):
-        f = -1 if random() < 0.5 else 1
-        ls = [random() * 20 + 80 for i in range(100)] if f == 1 else [
-              random() * 20 for i in range(100)]
-        #f = -1 if ls[0] > 50 else 1
-        pr = ls, f
-        d.append(pr)
-    print(d)
-    return d   
+    init()
+    d = read_models(3)
+    #print(d)
+    return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
     #        ([0,0,1,1],-1), ([1,0,0,0], 1), ([0,0,0,1],-1)]
 
 def init_model(sample, sm, sparm):
     """Initializes the learning model.
-    
+
     Initialize the structure model sm.  The sm.size_psi must be set to
     the number of features.  The ancillary purpose is to add any
     information to sm that is necessary from the user code
@@ -80,7 +84,7 @@ def init_model(sample, sm, sparm):
     # list of four features.  We just want a linear rule, so we have a
     # weight corresponding to each feature.  We also add one to allow
     # for a last "bias" feature.
-    sm.size_psi = len(sample[0][0])+1
+    sm.size_psi = 48*48+69*48
 
 def init_constraints(sample, sm, sparm):
     """Initializes special constraints.
@@ -108,7 +112,7 @@ def init_constraints(sample, sm, sparm):
     i.e., no constraints."""
     import svmapi
 
-    if True:
+    if False:
         # Just some example cosntraints.
         c, d = svmapi.Sparse, svmapi.Document
         # Return some really goofy constraints!  Normally, if the SVM
@@ -131,13 +135,50 @@ def init_constraints(sample, sm, sparm):
         constraints.append((lhs, 0))
     return constraints
 
-
+def wdotphi(x, y, sm):
+    # return svmapi.Sparse(sm.w) * psi(x, y)
+    sp = psi(x, y)
+    totlen = sm.size_psi
+    res = np.zeros(totlen)
+    for i, j in sp:
+        res[i] = j
+    return np.dot(list(sm.w), res)
+    
 def classify_example(x, sm, sparm):
     """Given a pattern x, return the predicted label."""
     # Believe it or not, this is a dot product.  The last element of
     # sm.w is assumed to be the weight associated with the bias
     # feature as explained earlier.
-    return sum([i*j for i,j in zip(x,sm.w[:-1])]) + sm.w[-1]
+
+    ql = list(sm.w)
+    obs = np.array(ql[:69*48]).reshape((48, 69))
+    trans = np.array(ql[69*48:]).reshape((48, 48))
+
+    LEN = len(x) // 69
+    xx = np.array(x).reshape((LEN, 69))
+    xxt = np.dot(xx, obs.T)
+
+    y = []
+    lgprob = np.zeros((48,1))
+    lst = []
+
+    for i in range(LEN):
+        p = lgprob + trans + xxt[i,:]
+        newlst = np.argmax(p, axis=0)
+        lst.append(newlst)
+        lgprob = np.max(p, axis=0).reshape((48,1))
+
+    now = np.argmax(lgprob)
+    y.append(now)
+    for i in range(LEN-1, 0, -1):
+        now = lst[i][now]
+        y.append(now)
+
+    y = y[::-1]
+    y = [label_list[i] for i in y]
+
+    print(answer(y))
+    return y
 
 def find_most_violated_constraint(x, y, sm, sparm):
     """Return ybar associated with x's most violated constraint.
@@ -155,10 +196,67 @@ def find_most_violated_constraint(x, y, sm, sparm):
     loss into account at all, but it isn't always a terrible
     approximation.  One still technically maintains the empirical
     risk bound condition, but without any regularization."""
-    score = classify_example(x,sm,sparm)
-    discy, discny = y*score, -y*score + 1
-    if discy > discny: return y
-    return -y
+    # return ['aa'] * (len(x) // 69)
+
+    ql = list(sm.w)
+    obs = np.array(ql[:69*48]).reshape((48, 69))
+    trans = np.array(ql[69*48:]).reshape((48, 48))
+
+    LEN = len(x) // 69
+    xx = np.array(x).reshape((LEN, 69))
+    xxt = np.dot(xx, obs.T)
+
+    yy = []
+    lgprob = np.zeros((48,1))
+    lst = []
+
+    for i in range(LEN):
+        ylab = np.ones((1,48))
+        ylab[0,phomap[y[i]][0]] = 0
+        p = lgprob + trans + xxt[i,:] + ylab
+        newlst = np.argmax(p, axis=0)
+        lst.append(newlst)
+        lgprob = np.max(p, axis=0).reshape((48,1))
+
+    now = np.argmax(lgprob)
+    yy.append(now)
+    for i in range(LEN-1, 0, -1):
+        now = lst[i][now]
+        yy.append(now)
+
+    yy = yy[::-1]
+    yy = [label_list[i] for i in yy]
+
+    print(answer(yy))
+    return yy
+
+
+    # LEN = len(x) // 69
+    # # yy = [random.choice(labels) for i in range(LEN)]
+    # yy = ['aa'] * LEN
+    # return yy;
+    # current_cost = loss(y, yy) + wdotphi(x, yy, sm)
+    # print('Current_DC', current_cost)
+
+    # for i in range(LEN):
+        # if(random.random() > 0.1): continue
+        # print(i, '/', LEN)
+        # for j in labels:
+            # if(random.random() > 0.1): continue
+            # yp = yy[:]
+            # yp[i] = j
+            # new_cost = loss(y, yp) + wdotphi(x, yp, sm)
+            # if new_cost > current_cost:
+                # yy = yp
+                # current_cost = new_cost
+                # print('Update_DC', new_cost, yp)
+            # # print('hao123', i, j, new_cost)
+
+    # return yy
+    # score = classify_example(x,sm,sparm)
+    # discy, discny = y*score, -y*score + 1
+    # if discy > discny: return y
+    # return -y
 
 def find_most_violated_constraint_slack(x, y, sm, sparm):
     """Return ybar associated with x's most violated constraint.
@@ -176,7 +274,7 @@ def find_most_violated_constraint_margin(x, y, sm, sparm):
     general find_most_violated_constraint function."""
     return find_most_violated_constraint(x, y, sm, sparm)
 
-def psi(x, y, sm, sparm):
+def psi(x, y, sm=None, sparm=None):
     """Return a feature vector representing pattern x and label y.
 
     This is the combined feature function, which this returns either a
@@ -187,11 +285,16 @@ def psi(x, y, sm, sparm):
     # or -1) times the feature vector for x, including that special
     # constant bias feature we pretend that we have.
     import svmapi
-    thePsi = [0.5*y*i for i in x]
-    thePsi.append(0.5*y) # Pretend as though x had an 1 at the end.
+    
+    thePsi = varpsi(x, y, phomap)
     return svmapi.Sparse(thePsi)
 
-def loss(y, ybar, sparm):
+def loss2(y, ybar):
+    a1 = answer(y)
+    a2 = answer(ybar)
+    return delta(a1, a2)
+
+def loss(y, ybar, sparm=None):
     """Return the loss of ybar relative to the true labeling y.
     
     Returns the loss for the correct label y and the predicted label
@@ -204,8 +307,17 @@ def loss(y, ybar, sparm):
     The default behavior is to perform 0/1 loss based on the truth of
     y==ybar."""
     # If they're the same sign, then the loss should be 0.
-    if y*ybar > 0: return 0
-    return 1
+
+    cnt = 0
+    for i in range(len(y)):
+        if y[i] != ybar[i]:
+            cnt += 1
+    return cnt
+    a1 = answer(y)
+    a2 = answer(ybar)
+    # print(a1)
+    # print(a2)
+    return delta(a1, a2)
 
 def print_iteration_stats(ceps, cached_constraint, sample, sm,
                           cset, alpha, sparm):
@@ -219,7 +331,6 @@ def print_iteration_stats(ceps, cached_constraint, sample, sm,
     
     The default behavior is that nothing is printed."""
     print()
-    print("A\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
 def print_learning_stats(sample, sm, cset, alpha, sparm):
     """Print statistics once learning has finished.
@@ -239,13 +350,19 @@ def print_learning_stats(sample, sm, cset, alpha, sparm):
     print('Model learned:', end=' ')
     print('[',', '.join(['%g'%i for i in sm.w]),']')
     print('Losses:', end=' ')
-    ls = [loss(y, classify_example(x, sm, sparm), sparm) for x,y in sample]
+    yp = [classify_example(x, sm, sparm) for x, y in sample]
+    yy = [y for x, y in sample]
+    ls = [loss(y, yb, sparm) for y, yb in zip(yy, yp)]
+    ls2 = [loss2(y, yb) for y, yb in zip(yy, yp)]
+    avgls = sum(ls) / len(ls)
+    avgls2 = sum(ls2) / len(ls2)
+    avglen = sum(len(answer(y)) for x,y in sample) / len(ls)
     print(ls)
-    print('Total losses: {}'.format(sum(ls)))
+    print('Average losses: {} ({}) / {}'.format(avgls, avgls2, avglen))
 
 def print_testing_stats(sample, sm, sparm, teststats):
     """Print statistics once classification has finished.
-    
+
     This is called after all test predictions are made to allow the
     display of any summary statistics that have been accumulated in
     the teststats object through use of the eval_prediction function.
@@ -255,7 +372,7 @@ def print_testing_stats(sample, sm, sparm, teststats):
 
 def eval_prediction(exnum, xxx_todo_changeme, ypred, sm, sparm, teststats):
     """Accumulate statistics about a single training example.
-    
+
     Allows accumulated statistics regarding how well the predicted
     label ypred for pattern x matches the true label y.  The first
     time this function is called teststats is None.  This function's
@@ -273,7 +390,7 @@ def eval_prediction(exnum, xxx_todo_changeme, ypred, sm, sparm, teststats):
 
 def write_model(filename, sm, sparm):
     """Dump the structmodel sm to a file.
-    
+
     Write the structmodel sm to a file at path filename.
 
     The default behavior is equivalent to
@@ -285,7 +402,7 @@ def write_model(filename, sm, sparm):
 
 def read_model(filename, sparm):
     """Load the structure model from a file.
-    
+
     Return the structmodel stored in the file at path filename, or
     None if the file could not be read for some reason.
 
@@ -313,11 +430,8 @@ def print_help():
     the --m option to load a Python module."""
 
     import svmapi
-    
-    # import numpy
-    # print(svmapi.__dict__)
-    # print(svmapi.__file__)
-    # print(svmapi.default_help)
+
+    print(svmapi.default_help)
     print("This is a help string for the learner!")
 
 def print_help_classify():
