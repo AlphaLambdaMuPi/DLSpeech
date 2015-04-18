@@ -1,4 +1,4 @@
-from read_input import read_map
+from read_input import read_map, read_map_39
 
 def phi(dt, mp):
     PHONES = 48
@@ -66,7 +66,9 @@ def delta(s1, s2):
 
 
 phomap = read_map()
+map39 = read_map_39()
 def answer(l):
+    return answer39(l)
     seq = [phomap[x][1] for x in l]
     s = ''.join(seq)
     s = s.strip('K')
@@ -79,3 +81,15 @@ def answer(l):
 
     return ans
 
+def answer39(l):
+    seq = [phomap[map39[x]][1] for x in l]
+    s = ''.join(seq)
+    s = s.strip('K')
+
+    if s == '':
+        return ''
+    ans = s[0]
+    for c in s:
+        if c != ans[-1]: ans += c
+
+    return ans

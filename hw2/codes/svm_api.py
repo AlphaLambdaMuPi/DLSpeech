@@ -15,14 +15,15 @@ import sys
 from settings import *
 from main import init
 from check_file import check_file
-from read_input import read_train_datas, read_map, read_models, read_tmodels
-from utils import varpsi, answer, delta
+from read_input import read_train_datas, read_map, read_models, read_tmodels, read_map_39
+from utils import varpsi, answer, delta, answer39
 
 phomap = read_map()
 labels = list(phomap.keys())
 label_list = [''] * 48
 builtin_llabels = []
 builtin_loutputs = []
+builtin_rawoutputs = []
 
 for i in phomap:
     label_list[phomap[i][0]] = i
@@ -69,10 +70,10 @@ def read_examples(filename, sparm):
 
     from random import random, randint
     init()
-    d = read_models(5000)
-    # bll, d = read_tmodels(3000)
-    # global builtin_llabels
-    # builtin_llabels = bll
+    # d = read_models(5000)
+    bll, d = read_tmodels(3000)
+    global builtin_llabels
+    builtin_llabels = bll
     #print(d)
     return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
@@ -241,7 +242,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
     yy = yy[::-1]
     yy = [label_list[i] for i in yy]
 
-    print(answer(yy))
+    print(answer(yy), loss2(y, yy))
     return yy
 
 
@@ -305,8 +306,8 @@ def psi(x, y, sm=None, sparm=None):
     return svmapi.Sparse(thePsi)
 
 def loss2(y, ybar):
-    a1 = answer(y)
-    a2 = answer(ybar)
+    a1 = answer39(y)
+    a2 = answer39(ybar)
     return delta(a1, a2)
 
 def loss(y, ybar, sparm=None):
@@ -391,7 +392,7 @@ def print_learning_stats(sample, sm, cset, alpha, sparm):
     avglen = sum(len(answer(y)) for x, y in sample) / len(ls)
     avglen2 = sum(len(y) for x, y in sample) / len(ls2)
     # print(ls)
-    for yn, yc, lm in zip(yp, yy, ls):
+    for yn, yc, lm in zip(yp, yy, ls2):
         print(answer(yn), '/', lm)
         print(answer(yc))
 
@@ -407,7 +408,8 @@ def print_testing_stats(sample, sm, sparm, teststats):
 
     The default behavior is that nothing is printed."""
     print(teststats)
-    yp = [classify_example(x, sm, sparm) for x, y in sample]
+    # yp = [classify_example(x, sm, sparm) for x, y in sample]
+    yp = builtin_rawoutputs
     yy = [y for x, y in sample]
     ls2 = [loss2(y, yb) for y, yb in zip(yy, yp)]
     avgls2 = sum(ls2) / len(ls2)
@@ -476,6 +478,7 @@ def write_label(y):
     'print>>fileptr,y'"""
 
     ans = answer(y)
+    builtin_rawoutputs.append(y)
     builtin_loutputs.append(ans)
 
 def print_help():
