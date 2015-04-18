@@ -65,8 +65,8 @@ def delta(s1, s2):
     return pv[-1]
 
 
-phomap = read_map()
 def answer(l):
+    phomap = read_map()
     seq = [phomap[x][1] for x in l]
     s = ''.join(seq)
     s = s.strip('K')

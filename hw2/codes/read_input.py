@@ -137,6 +137,19 @@ def read_map():
     mpres = res
     return mpres
 
+def read_4839():
+    '''
+        format: res['<phone>'] = (id, answer_char)
+    '''
+    res = {}
+    with open(DATA_PATH['48_39']) as f:
+        for line in f:
+            line = line.rstrip('\n')
+            datas = line.split()
+            res[datas[0]] = datas[1]
+    logger.info('Read 48-39 map done ... ')
+    return res
+
 def read_models(count = 100):
     d = read_train_datas(count)
     mp = read_map()
