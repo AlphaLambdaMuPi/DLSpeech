@@ -17,6 +17,8 @@ from main import init
 from check_file import check_file
 from read_input import read_train_datas, read_map, read_models, read_tmodels, read_map_39
 from utils import varpsi, answer, delta, answer39
+from timer import Timer
+timer = Timer()
 
 phomap = read_map()
 labels = list(phomap.keys())
@@ -149,12 +151,14 @@ def wdotphi(x, y, sm):
     for i, j in sp:
         res[i] = j
     return np.dot(list(sm.w), res)
+
     
 def classify_example(x, sm, sparm):
     """Given a pattern x, return the predicted label."""
     # Believe it or not, this is a dot product.  The last element of
     # sm.w is assumed to be the weight associated with the bias
     # feature as explained earlier.
+
 
     ql = list(sm.w)
     obs = np.array(ql[:69*48]).reshape((48, 69))
@@ -204,7 +208,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
     risk bound condition, but without any regularization."""
     # return ['aa'] * (len(x) // 69)
 
-
+    timer.start('violate')
     ql = list(sm.w)
     obs = np.array(ql[:69*48]).reshape((48, 69))
     trans = np.array(ql[69*48:]).reshape((48, 48))
@@ -243,6 +247,10 @@ def find_most_violated_constraint(x, y, sm, sparm):
     yy = [label_list[i] for i in yy]
 
     print(answer(yy), loss2(y, yy))
+    timer.stop('violate')
+    print('Time used: {}, total used: {}'.format(
+        timer.get('violate'), timer.get()))
+
     return yy
 
 
@@ -324,6 +332,7 @@ def loss(y, ybar, sparm=None):
     y==ybar."""
     # If they're the same sign, then the loss should be 0.
 
+    timer.start('loss')
     cnt = 0
     yl = ''
     ybl = ''
@@ -338,6 +347,10 @@ def loss(y, ybar, sparm=None):
             ybl = ybar[i]
         if (alpha or beta) and (y[i] == ybar[i]):
             cnt -= 2
+
+    timer.stop('loss')
+    print('Time used: {}, total used: {}'.format(
+        timer.get('loss'), timer.get()))
     return cnt
 
     # cnt = 0

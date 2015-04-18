@@ -19,7 +19,6 @@ def init_log_settings():
 
     log_parent = os.path.dirname(LOG_FILE_NAME)
     if not os.path.isdir(log_parent):
-        # logger.info('Make dir %s', log_parent)
         os.makedirs(log_parent)
 
     rotator = logging.handlers.RotatingFileHandler(
