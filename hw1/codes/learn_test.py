@@ -49,6 +49,22 @@ def group_predict(models, X, prob=False):
         return yp
     return yp.argmax(axis=1)
 
+def predict_prob(model, smpath, outpath, pmpath):
+    X_submit, label_submit = read_data.read_feature(smpath, label=True)
+    # Y_submit = model.predict(X_submit)
+    Y_submit = model.predict(X_submit, prob=True)
+    f = open(outpath, 'w')
+    for i in range(Y_submit.shape[0]):
+        f.write(' '.join(str(j) for j in Y_submit[i,:]) + '\n')
+    f.close()
+
+def predict_prob2(model, X_submit, outpath):
+    Y_submit = model.predict(X_submit, prob=True)
+    f = open(outpath, 'w')
+    for i in range(Y_submit.shape[0]):
+        f.write(' '.join(str(j) for j in Y_submit[i,:]) + '\n')
+    f.close()
+
 def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
@@ -59,13 +75,6 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # param_grid = [
           # {
               # 'Dims': [dims],
-              # 'Eta': [3E-3, 1E-2, 3E-2, 1E-1], 
-              # 'Drate': [0.9999, 0.99999, 0.99999],
-              # 'Minrate': [0.2], 
-              # 'Momentum': [0.0, 0.5, 0.9],
-              # 'Batchsize': [128],
-          # },
-    # ]
 
     # param_grid = [
           # {

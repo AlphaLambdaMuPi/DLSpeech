@@ -4,7 +4,7 @@ from sklearn import preprocessing
 
 from settings import *
 
-def preproc(X, num = 3):
+def preproc(X, num = 2):
     mats = []
 
     for i in range(-num, num, 1):
