@@ -13,22 +13,21 @@ import random
 import logging, logging.handlers
 import sys
 from settings import *
-from main import init
+from shared import init
 from check_file import check_file
-from read_input import read_train_datas, read_map, read_models, read_tmodels, read_map_39
+from read_input import read_train_datas, read_models, read_tmodels
 from utils import varpsi, answer, delta, answer39
 from timer import Timer
+from phone_maps import *
+pho_init()
+phomap, phomap39, invphomap, labels = get_maps()
+
 timer = Timer()
 
-phomap = read_map()
-labels = list(phomap.keys())
-label_list = [''] * 48
 builtin_llabels = []
 builtin_loutputs = []
 builtin_rawoutputs = []
 
-for i in phomap:
-    label_list[phomap[i][0]] = i
 
 def parse_parameters(sparm):
     """Sets attributes of sparm based on command line arguments.
@@ -72,10 +71,10 @@ def read_examples(filename, sparm):
 
     from random import random, randint
     init()
-    # d = read_models(5000)
-    bll, d = read_tmodels(3000)
-    global builtin_llabels
-    builtin_llabels = bll
+    d = read_models(5)
+    # bll, d = read_tmodels(3000)
+    # global builtin_llabels
+    # builtin_llabels = bll
     #print(d)
     return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
@@ -185,7 +184,7 @@ def classify_example(x, sm, sparm):
         y.append(now)
 
     y = y[::-1]
-    y = [label_list[i] for i in y]
+    y = [id2ph(i) for i in y]
 
     # print(answer(y))
     return y
@@ -227,7 +226,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
         alpha = np.array((i == 0) or (y[i] != y[i-1]))
         beta = (~np.identity(48, dtype=bool)) | (i == 0)
         gamma = np.zeros((1,48))
-        gamma[0,phomap[y[i]][0]] = 1
+        gamma[0,ph2id(y[i])] = 1
         gamma = gamma * (alpha | beta)
         alpha = alpha.astype(float)
         beta = beta.astype(float)
@@ -244,12 +243,12 @@ def find_most_violated_constraint(x, y, sm, sparm):
         yy.append(now)
 
     yy = yy[::-1]
-    yy = [label_list[i] for i in yy]
+    yy = [id2ph(i) for i in yy]
 
     print(answer(yy), loss2(y, yy))
     timer.stop('violate')
-    print('Time used: {}, total used: {}'.format(
-        timer.get('violate'), timer.get()))
+    #print('Time used: {}, total used: {}'.format(
+    #    timer.get('violate'), timer.get()))
 
     return yy
 
@@ -349,8 +348,8 @@ def loss(y, ybar, sparm=None):
             cnt -= 2
 
     timer.stop('loss')
-    print('Time used: {}, total used: {}'.format(
-        timer.get('loss'), timer.get()))
+    #print('Time used: {}, total used: {}'.format(
+    #    timer.get('loss'), timer.get()))
     return cnt
 
     # cnt = 0

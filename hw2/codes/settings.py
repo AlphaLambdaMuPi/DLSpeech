@@ -15,6 +15,14 @@ DATA_PATH['label'] = os.path.join(DATA_DIR, 'label', 'train.lab')
 DATA_PATH['48_idx_chr'] = os.path.join(DATA_DIR, 'phones', '48_idx_chr.map')
 DATA_PATH['48_39'] = os.path.join(DATA_DIR, 'phones', '48_39.map')
 
+OUTPUT_PATH = os.path.join(ROOT_DIR, '..', 'output')
+
+SVM_PATH = os.path.join(ROOT_DIR, '..', 'svm-python3-kai')
+SVM_LEARN_PATH = os.path.join(SVM_PATH, 'svm_python_learn')
+SVM_CLASSIFY_PATH = os.path.join(SVM_PATH, 'svm_python_classify')
+if not os.path.isdir(OUTPUT_PATH):
+    os.makedirs(OUTPUT_PATH)
+
 def init_log_settings():
 
     log_parent = os.path.dirname(LOG_FILE_NAME)

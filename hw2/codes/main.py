@@ -1,38 +1,53 @@
 import logging, logging.handlers
 import sys
 from settings import *
-from check_file import check_file, load_shelve
-from read_input import read_train_datas, read_train_datas_by_name, read_map
-from utils import phi
+from datetime import datetime
+import subprocess, os
 import re
-
-def init():
-    init_log_settings()
-    check_file()
-    load_shelve(True)
+import requests
 
 def main():
-    init()
-    #dt = read_train_datas(1000)
-    #print(dt[0][0])
-    #dt = read_train_datas_by_name('faem0_si1392')
-    #mp = read_map()
-    #res = phi(dt, mp)
-    #print(res)
 
-    names = []
-    with open(DATA_PATH['test'], 'r') as f:
-        for line in f:
-            names.append(line.split()[0])
+    record = True
+    print('Enter a name (default = yapsilon) or konkon if you dont want to '
+          'record')
+    name = input()
+    if name == 'konkon':
+        record = False
 
-    regex = re.compile('(\w+)_(\d+)')
-    with open('b.ans', 'w') as f:
-        f.write('id,phone_sequence\n')
-        for i in range(len(names)):
-            g = regex.match(names[i])
-            a, b = g.group(1), int(g.group(2))
-            if b == 1:
-                f.write('{},\n'.format(a))
+
+    now = datetime.now()
+    now_str = now.strftime('%m%d_%H%M%S')
+    if name: now_str += '_' + name
+    now_dir = os.path.join(OUTPUT_PATH, now_str)
+    if record: os.mkdir(now_dir)
+    rec_file = os.path.join(os.path.abspath(now_dir), 'w.out')
+
+
+    SVM_FILE = 'svm_api'
+    C = 100
+    E = 200
+    cmd = [SVM_LEARN_PATH, '--m', SVM_FILE, '-c', str(C), '-e', str(E),
+           '_____yapsilon', rec_file]
+    if not record: cmd = cmd[:-1]
+
+    catchEps = re.compile(r'CEps=(\d+\.\d*),')
+
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                          bufsize=10) as p:
+        try:
+            for line in p.stdout:
+                s = line.decode()
+                print(s)
+                mt = catchEps.search(s)
+                if mt:
+                    requests.post('http://140.112.18.227:5000/send', 
+                                 {'name': now_str, 
+                                  'value': mt.group(1),
+                                  'time_stamp': str(datetime.now())})
+        except KeyboardInterrupt:
+            p.terminate()
+            os.kill(p.pid, 0)
 
 
 
