@@ -12,7 +12,7 @@ DATA_PATH = {}
 DATA_PATH['fbank'] = os.path.join(DATA_DIR, 'fbank', 'train.ark')
 # DATA_PATH['fbank'] = 'prob.csv'
 DATA_PATH['test'] = os.path.join(DATA_DIR, 'fbank', 'test.ark')
-DATA_PATH['label'] = os.path.join(DATA_DIR, 'label', 'train.lab')
+DATA_PATH['label'] = os.path.join(DATA_DIR, 'label', 'train.lab2')
 DATA_PATH['48_idx_chr'] = os.path.join(DATA_DIR, 'phones', '48_idx_chr.map')
 DATA_PATH['48_39'] = os.path.join(DATA_DIR, 'phones', '48_39.map')
 

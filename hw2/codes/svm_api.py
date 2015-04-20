@@ -36,7 +36,9 @@ hw1_big_matrix = None
 global_y = []
 gstartnum = 0
 real_losses = []
-timer = Timer()
+
+for i in phomap:
+    label_list[phomap[i][0]] = i
 
 def parse_parameters(sparm):
     """Sets attributes of sparm based on command line arguments.
@@ -307,6 +309,24 @@ def find_most_violated_constraint(x, y, sm, sparm):
         # theW = list(sm.w)
         # for i in range(len(theW)//500):
             # print(sum(theW[i*500:(i+1)*500]), end=' ')
+
+    realy = classify_example(x, sm, sparm)
+
+    l2 = loss2(y, realy)
+
+    print(answer(yy), loss2(y, yy), l2, answer(realy))
+
+    global real_losses
+    real_losses.append(l2)
+    if len(real_losses) >= 100:
+        print('========= Current Loss :', sum(real_losses) / len(real_losses),
+              '=========')
+        real_losses = []
+
+    if random.random() < 0.01:
+        theW = list(sm.w)
+        for i in range(len(theW)//500):
+            print(sum(theW[i*500:(i+1)*500]), end=' ')
 
     return yy
 
