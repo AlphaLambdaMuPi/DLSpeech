@@ -15,18 +15,26 @@ import sys
 from settings import *
 from shared import init
 from check_file import check_file
-from read_input import read_train_datas, read_models, read_tmodels
+from read_input import read_train_datas, read_map, read_models, read_tmodels, \
+    read_map_39, read_hw1_matrix
 from utils import varpsi, answer, delta, answer39
 from timer import Timer
 from phone_maps import *
 pho_init()
 phomap, phomap39, invphomap, labels = get_maps()
 
-timer = Timer()
-
+phomap = read_map()
+phomap39 = read_map_39()
+labels = list(phomap.keys())
+label_list = [''] * 48
 builtin_llabels = []
 builtin_loutputs = []
 builtin_rawoutputs = []
+builtin_39outputs = []
+hw1_big_matrix = None
+global_y = []
+gstartnum = 0
+real_losses = []
 
 
 def parse_parameters(sparm):
@@ -71,11 +79,29 @@ def read_examples(filename, sparm):
 
     from random import random, randint
     init()
-    d = read_models(5)
+    global gstartnum
+    gstartnum = 0
+    d = read_models(gstartnum + 1)
     # bll, d = read_tmodels(3000)
     # global builtin_llabels
     # builtin_llabels = bll
     #print(d)
+
+    global global_y
+    global_y = [y for x, y in d]
+
+    d = d[gstartnum:]
+
+    # for i in range(len(d)):
+        # for j in range(len(d[i][0])):
+            # d[i][0][j] /= 30
+
+    # thePsi = np.zeros(48*48+69*48)
+    # for i, j in d:
+        # thePsi += np.abs(varpsi(i, j, phomap))
+    # for i in range(len(thePsi)//1000):
+        # print(sum(thePsi[i*1000:(i+1)*1000]), end=' ')
+
     return d
     #return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
     #        ([0,0,1,1],-1), ([1,0,0,0], 1), ([0,0,0,1],-1)]
@@ -133,13 +159,13 @@ def init_constraints(sample, sm, sparm):
     # Encode positivity constraints.  Note that this constraint is
     # satisfied subject to slack constraints.
     constraints = []
-    for i in range(sm.size_psi):
-        # Create a sparse vector which selects out a single feature.
-        sparse = svmapi.Sparse([(i,1)])
-        # The left hand side of the inequality is a document.
-        lhs = svmapi.Document([sparse], costfactor=1, slackid=i+1+len(sample))
-        # Append the lhs and the rhs (in this case 0).
-        constraints.append((lhs, 0))
+    # for i in range(sm.size_psi):
+        # # Create a sparse vector which selects out a single feature.
+        # sparse = svmapi.Sparse([(i,1)])
+        # # The left hand side of the inequality is a document.
+        # lhs = svmapi.Document([sparse], costfactor=1, slackid=i+1+len(sample))
+        # # Append the lhs and the rhs (in this case 0).
+        # constraints.append((lhs, 0))
     return constraints
 
 def wdotphi(x, y, sm):
@@ -152,7 +178,7 @@ def wdotphi(x, y, sm):
     return np.dot(list(sm.w), res)
 
     
-def classify_example(x, sm, sparm):
+def classify_example(x, sm, sparm, hw1_matrix=None):
     """Given a pattern x, return the predicted label."""
     # Believe it or not, this is a dot product.  The last element of
     # sm.w is assumed to be the weight associated with the bias
@@ -167,12 +193,21 @@ def classify_example(x, sm, sparm):
     xx = np.array(x).reshape((LEN, 69))
     xxt = np.dot(xx, obs.T)
 
+    global global_y
+    global hw1_big_matrix
+    global gstartnum
+    if hw1_big_matrix == None:
+        hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
+    hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
+    if hw1_matrix != None:
+        xxt = hw1_matrix
+
     y = []
     lgprob = np.zeros((48,1))
     lst = []
 
     for i in range(LEN):
-        p = lgprob + trans + xxt[i,:]
+        p = lgprob + trans*0 + xxt[i,:] #/ 1.4
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((48,1))
@@ -232,6 +267,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
         beta = beta.astype(float)
 
         p = lgprob + trans + xxt[i,:] + 1 * alpha + beta - 2 * gamma
+        # p = lgprob + trans + xxt[i,:] + ylab
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((48,1))
@@ -245,10 +281,23 @@ def find_most_violated_constraint(x, y, sm, sparm):
     yy = yy[::-1]
     yy = [id2ph(i) for i in yy]
 
-    print(answer(yy), loss2(y, yy))
-    timer.stop('violate')
-    #print('Time used: {}, total used: {}'.format(
-    #    timer.get('violate'), timer.get()))
+    realy = classify_example(x, sm, sparm)
+
+    l2 = loss2(y, realy)
+
+    print(answer(yy), loss2(y, yy), l2, answer(realy))
+
+    global real_losses
+    real_losses.append(l2)
+    if len(real_losses) >= 100:
+        print('========= Current Loss :', sum(real_losses) / len(real_losses),
+              '=========')
+        real_losses = []
+
+    if random.random() < 0.01:
+        theW = list(sm.w)
+        for i in range(len(theW)//500):
+            print(sum(theW[i*500:(i+1)*500]), end=' ')
 
     return yy
 
@@ -310,7 +359,17 @@ def psi(x, y, sm=None, sparm=None):
     import svmapi
     
     thePsi = varpsi(x, y, phomap)
+    # for i in range(len(thePsi)//500):
+        # print(sum(thePsi[i*500:(i+1)*500]), end=' ')
+
     return svmapi.Sparse(thePsi)
+
+def zero_one_loss(y, ybar):
+    cnt = 0
+    for i in range(len(y)):
+        if phomap39[y[i]] != phomap39[ybar[i]]:
+            cnt += 1
+    return cnt
 
 def loss2(y, ybar):
     a1 = answer39(y)
@@ -375,7 +434,10 @@ def print_iteration_stats(ceps, cached_constraint, sample, sm,
     constructed from the cache.
     
     The default behavior is that nothing is printed."""
-    print()
+    print('Iter')
+    thePsi = list(sm.w)
+    for i in range(len(thePsi)//500):
+        print(sum(thePsi[i*500:(i+1)*500]), end=' ')
 
 def print_learning_stats(sample, sm, cset, alpha, sparm):
     """Print statistics once learning has finished.
@@ -424,18 +486,30 @@ def print_testing_stats(sample, sm, sparm, teststats):
     yp = builtin_rawoutputs
     yy = [y for x, y in sample]
     ls2 = [loss2(y, yb) for y, yb in zip(yy, yp)]
+    zols = [zero_one_loss(y, yb) for y, yb in zip(yy, yp)]
     avgls2 = sum(ls2) / len(ls2)
+    avgzoloss = sum(zols) / sum(len(y) for y in yy)
     avglen = sum(len(answer(y)) for x, y in sample) / len(ls2)
     for yn, yc, lm in zip(yp, yy, ls2):
         print(answer(yn), '/', lm)
         print(answer(yc))
+        print(' '.join(yn))
+        print(' '.join(yc))
 
     print('Levenshtein losses: {} / {}'.format(avgls2, avglen))
+    print('0/1 Accuracy: {} %'.format((1 - avgzoloss) * 100))
 
-    f = open('pred.out', 'w')
+    f = open('hw2_pred.out', 'w')
     f.write('id,phone_sequence\n')
     for i, j in zip(builtin_llabels, builtin_loutputs):
         f.write(i + ',' + j + '\n')
+    f.close()
+
+    f = open('hw1_pred.out', 'w')
+    f.write('id,prediction\n')
+    for i, j in zip(builtin_llabels, builtin_39outputs):
+        for k, kk in enumerate(j):
+            f.write(i + '_' + str(k+1) + ',' + kk + '\n')
     f.close()
 
 def eval_prediction(exnum, xxx_todo_changeme, ypred, sm, sparm, teststats):
@@ -492,6 +566,7 @@ def write_label(y):
     ans = answer(y)
     builtin_rawoutputs.append(y)
     builtin_loutputs.append(ans)
+    builtin_39outputs.append([phomap39[z] for z in y])
 
 def print_help():
     """Help printed for badly formed CL-arguments when learning.

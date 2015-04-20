@@ -52,9 +52,10 @@ def varpsi(X, Y, mp):
             res[trans_id(last_lid, lid)] += 1.0
 
         last_lid = lid
+
+    # for i in range(len(res)):
+        # res[i] /= 50000
     return res
-
-
 
 def delta(s1, s2):
     pv = list(range(len(s2)+1))

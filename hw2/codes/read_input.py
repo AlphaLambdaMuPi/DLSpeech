@@ -2,6 +2,7 @@ from settings import *
 import logging
 import re
 import shelve
+import numpy as np
 logger = logging.getLogger()
 
 def read_feature(max_lines = 10**10):
@@ -96,7 +97,7 @@ def read_feature_label(test=False):
 
     return res
 
-def read_train_datas(count = 100):
+def read_train_datas(count = 100, start = 0):
     '''
         The prefered way to get train data...
         Total groups is about 3xxx (count = 100 ~ 3%)
@@ -104,7 +105,10 @@ def read_train_datas(count = 100):
     rt = []
     with shelve.open(SHELVE_FILE_NAME, 'r') as d:
         data = d['names']
-        for i in range(min(count, len(data))):
+        data.sort()
+        l = start
+        r = start + count
+        for i in range(l, min(r, len(data))):
             rt.append((data[i], d[data[i]]))
     return rt
 
@@ -153,8 +157,8 @@ def read_map_39():
     mp39res = res
     return mp39res
 
-def read_models(count = 100):
-    d = read_train_datas(count)
+def read_models(count = 100, start = 0):
+    d = read_train_datas(count, start)
     mp = read_map()
     res = []
     for p in d:
@@ -199,3 +203,31 @@ def read_tmodels(count = 100):
 
     f.close()
     return labs, res
+
+def read_hw1input(path, Y):
+    f = open(path)
+    ln = [x.strip('\n').split(',')[1] for x in f]
+    cnt = 0
+    res = []
+    for y in Y:
+        l = len(y)
+        res.append(ln[cnt:cnt+l])
+        cnt += l
+
+    f.close()
+    return res
+
+def read_hw1_matrix(path, Y):
+    f = open(path)
+    ln = [[float(y) for y in x.strip('\n').split()] for x in f]
+    ln = np.array(ln)
+
+    cnt = 0
+    res = []
+    for y in Y:
+        l = len(y)
+        res.append(ln[cnt:cnt+l,:])
+        cnt += l
+
+    f.close()
+    return res
