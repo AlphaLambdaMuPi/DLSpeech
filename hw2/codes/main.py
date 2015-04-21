@@ -26,7 +26,7 @@ def main():
 
     SVM_FILE = 'svm_api'
     C = 100
-    E = 200
+    E = 100
     cmd = [SVM_LEARN_PATH, '--m', SVM_FILE, '-c', str(C), '-e', str(E),
            '_____yapsilon', rec_file]
     if not record: cmd = cmd[:-1]

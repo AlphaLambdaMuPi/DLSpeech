@@ -10,8 +10,10 @@ def preproc(X, num = 3):
     for i in range(-num, num, 1):
         mats.append(np.concatenate((X[-i*2:, :], X[:-i*2, :]), axis=0))
 
-    return np.concatenate(mats, axis=1)
+    Iks = np.concatenate(mats, axis=1)
+    Iks = (Iks - np.mean(Iks, axis=0)) / (np.std(Iks, axis=0) + 1E-2)
     # return preprocessing.normalize(X)
+    return Iks
 
 def read_label(path, pmpath, datasize=1E9):
     pmap = {}

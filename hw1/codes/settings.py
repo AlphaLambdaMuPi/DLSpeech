@@ -12,7 +12,7 @@ Real Test Data
 Easy Test Data
 '''
 ORIG_PATH = path.abspath('../../hw2/data')
-FEATURE_PATH = path.join(ORIG_PATH, 'mfcc', 'train.ark')
+FEATURE_PATH = path.join(ORIG_PATH, 'fbank', 'train.ark')
 LABEL_PATH = path.join(ORIG_PATH, 'label', 'train.lab2')
 P48_39_PATH = path.join(ORIG_PATH, 'phones', '48_39.map')
 

@@ -48,8 +48,10 @@ def group_predict(models, X, prob=False):
 def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # model = svm.SVC(kernel='poly', C=1E-2, gamma=1E-2, degree=2)
     # model = svm.LinearSVC(C=1E0)
+    # print(np.std(X_train, axis=0))
+    # print(np.mean(X_train, axis=0))
     # model = linear_model.LogisticRegression()
-    dims = [X_train.shape[1], 200, 200, 200, np.max(Y_train)+1]
+    dims = [X_train.shape[1], 300, 300, 300, np.max(Y_train)+1]
     # param_grid = [
           # {
               # 'Dims': [dims],
@@ -78,7 +80,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
 
     # print(clf.best_params_)
 
-    MSIZE = 1
+    MSIZE = 5
     models = []
     for i in range(MSIZE):
         x = DNN(
@@ -129,7 +131,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
 
 def main():
 
-    DATA_SIZE = 100000
+    DATA_SIZE = 2100000
     X = read_data.read_feature(FEATURE_PATH, DATA_SIZE)
     Y = read_data.read_label(LABEL_PATH, P48_39_PATH, DATA_SIZE)
     print(type(X))
@@ -142,7 +144,6 @@ def main():
 
     train_size = len(Y) * 0.9
     train_size = int(train_size)
-
 
     perm = np.random.permutation(train_size)
     # print(perm)
@@ -172,9 +173,9 @@ def main():
     # predict_submit(models, SUBMIT_FEATURE_PATH_2, os.path.join(SUBMIT_PATH, 'feature.csv'), P48_39_PATH)
     # predict_prob(models, SUBMIT_FEATURE_PATH_2, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
 
-    # predict_submit(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit.csv'), P48_39_PATH)
-    # predict_prob(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit_prob.csv'), P48_39_PATH)
-    # predict_prob(models, FEATURE_PATH, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
+    predict_submit(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit.csv'), P48_39_PATH)
+    predict_prob(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit_prob.csv'), P48_39_PATH)
+    predict_prob(models, FEATURE_PATH, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
     
     # orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
     # sort_label(orig_path + 'fbank/train.ark', orig_path + 'state_label/train.lab', 

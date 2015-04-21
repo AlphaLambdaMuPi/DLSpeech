@@ -80,8 +80,8 @@ def read_examples(filename, sparm):
     from random import random, randint
     init()
     global gstartnum
-    gstartnum = 3300
-    d = read_models(gstartnum + 100)
+    gstartnum = 0
+    d = read_models(gstartnum + 50)
     # bll, d = read_tmodels(3000)
     # global builtin_llabels
     # builtin_llabels = bll
@@ -285,19 +285,19 @@ def find_most_violated_constraint(x, y, sm, sparm):
 
     l2 = loss2(y, realy)
 
-    print(answer(yy), loss2(y, yy), l2, answer(realy))
+    # print(answer(yy), loss2(y, yy), l2, answer(realy))
 
     global real_losses
     real_losses.append(l2)
     if len(real_losses) >= 100:
-        print('========= Current Loss :', sum(real_losses) / len(real_losses),
-              '=========')
+        rls = sum(real_losses) / len(real_losses)
+        print('>>> [Loss]({})'.format(rls))
         real_losses = []
 
-    if random.random() < 0.01:
-        theW = list(sm.w)
-        for i in range(len(theW)//500):
-            print(sum(theW[i*500:(i+1)*500]), end=' ')
+    # if random.random() < 0.01:
+        # theW = list(sm.w)
+        # for i in range(len(theW)//500):
+            # print(sum(theW[i*500:(i+1)*500]), end=' ')
 
     return yy
 

@@ -14,6 +14,7 @@ def sigmoid(x):
     return T.maximum(x, 0)
     # return T.maximum(x, 0) + 0.05 * T.minimum(x, 0)
     # return T.log(1+T.exp(x))
+    # return T.tanh(x)
 
 x = T.dscalar('x')
 y = T.dscalar('y')
