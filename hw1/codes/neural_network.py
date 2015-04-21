@@ -110,6 +110,7 @@ class DNN:
 
 
     def plt_init(self):
+        return
         self.figure, self.ax = plt.subplots()
         self.line_ain, = self.ax.plot([], [], '-o')
         self.line_aval, = self.ax.plot([], [], '-o')
@@ -117,6 +118,7 @@ class DNN:
         self.ax.grid()
 
     def plt_refresh(self, x, ain, aval):
+        return
         self.line_ain.set_xdata(np.append(self.line_ain.get_xdata(), x))
         self.line_ain.set_ydata(np.append(self.line_ain.get_ydata(), ain))
         self.line_aval.set_xdata(np.append(self.line_aval.get_xdata(), x))

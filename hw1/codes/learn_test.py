@@ -8,8 +8,12 @@ import mnist
 
 import os
 import datetime as dt
+from datetime import datetime
+import requests
 
 from settings import *
+
+NOW_STR = ''
 
 def predict_submit(models, smpath, outpath, pmpath):
     X_submit, label_submit = read_data.read_feature(smpath, label=True)
@@ -109,6 +113,19 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
         Aval = label_error.calc_accuracy(Y_test, yp_t)
 
         print('Ain = {:.4f}, \tAval = {:.4f}'.format(Ain, Aval))
+        try:
+            requests.post('http://140.112.18.227:5000/post/send_data', 
+                         {'name': NOW_STR, 
+                          'item': 'Ain',
+                          'value': Ain,
+                          'time_stamp': str(datetime.now())})
+            requests.post('http://140.112.18.227:5000/post/send_data', 
+                         {'name': NOW_STR, 
+                          'item': 'Aval',
+                          'value': Aval,
+                          'time_stamp': str(datetime.now())})
+        except Exception:
+            pass
         models[0].plt_refresh(models[0].Epoch, Ain, Aval)
         if to_break:
             break
@@ -131,14 +148,18 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
 
 def main():
 
-    DATA_SIZE = 2100000
+
+
+    DATA_SIZE = 10000
     X = read_data.read_feature(FEATURE_PATH, DATA_SIZE)
     Y = read_data.read_label(LABEL_PATH, P48_39_PATH, DATA_SIZE)
     print(type(X))
     X = X[:,:]
     Y = Y[:]
-    
+
+    global NOW_STR
     cur_time_string = dt.datetime.now().strftime('%m%d_%H%M%S')
+    NOW_STR = cur_time_string + '_dnn'
     SUBMIT_PATH = os.path.join(RESULT_PATH, cur_time_string) 
     os.makedirs(SUBMIT_PATH)
 
@@ -163,8 +184,24 @@ def main():
     # Alpha, Beta, Gamma = mnist.load_data('mnist3.pkl.gz')
     # X_train, Y_train = Alpha
     # X_test, Y_test = Gamma
+    try:
+        requests.post('http://140.112.18.227:5000/post/send_status', 
+                     {'name': NOW_STR, 
+                      'status': 'new',
+                      'type': 'dnn',
+                      'time_stamp': str(datetime.now())})
+    except Exception:
+        pass
 
     Aval, models = train_experiment(X_train, Y_train, X_test, Y_test, 2000)
+    
+    try:
+        requests.post('http://140.112.18.227:5000/post/send_status', 
+                     {'name': NOW_STR, 
+                      'status': 'ended',
+                      })
+    except Exception:
+        pass
 
     del X_train, X_test, Y_train, Y_test, perm
     del X, Y

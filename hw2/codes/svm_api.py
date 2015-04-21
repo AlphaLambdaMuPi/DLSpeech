@@ -291,6 +291,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
     if len(real_losses) >= 100:
         rls = sum(real_losses) / len(real_losses)
         print('>>> [Loss]({})'.format(rls))
+        sys.stdout.flush()
         real_losses = []
 
     # if random.random() < 0.01:

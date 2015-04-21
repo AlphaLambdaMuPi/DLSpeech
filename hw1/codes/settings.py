@@ -13,7 +13,7 @@ Easy Test Data
 '''
 ORIG_PATH = path.abspath('../../hw2/data')
 FEATURE_PATH = path.join(ORIG_PATH, 'fbank', 'train.ark')
-LABEL_PATH = path.join(ORIG_PATH, 'label', 'train.lab2')
+LABEL_PATH = path.join(ORIG_PATH, 'label', 'train.lab')
 P48_39_PATH = path.join(ORIG_PATH, 'phones', '48_39.map')
 
 SUBMIT_FEATURE_PATH = path.join(ORIG_PATH, 'fbank', 'test.ark')

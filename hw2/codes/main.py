@@ -34,7 +34,7 @@ def main():
     catchEps = re.compile(r'CEps=(\d+\.\d*),')
     catchData = re.compile(r'>>>\s*\[([^\]]*)\].*\(([^\)]*)\)')
     try:
-        requests.post('http://140.112.18.227:5000/send_status', 
+        requests.post('http://140.112.18.227:5000/post/send_status', 
                      {'name': now_str, 
                       'status': 'new',
                       'type': 'svm',
@@ -43,7 +43,7 @@ def main():
         pass
 
     with subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                          bufsize=10) as p:
+                          bufsize=1) as p:
         try:
             for line in p.stdout:
                 s = line.decode()
@@ -51,7 +51,7 @@ def main():
                 mt = catchEps.search(s)
                 if mt:
                     try:
-                        requests.post('http://140.112.18.227:5000/send_data', 
+                        requests.post('http://140.112.18.227:5000/post/send_data', 
                                      {'name': now_str, 
                                       'item': 'CEps',
                                       'value': mt.group(1),
@@ -61,7 +61,7 @@ def main():
                 mt = catchData.search(s)
                 if mt:
                     try:
-                        requests.post('http://140.112.18.227:5000/send_data', 
+                        requests.post('http://140.112.18.227:5000/post/send_data', 
                                      {'name': now_str, 
                                       'item': mt.group(1),
                                       'value': mt.group(2),
@@ -71,7 +71,7 @@ def main():
 
         except KeyboardInterrupt:
             try:
-                requests.post('http://140.112.18.227:5000/send_status', 
+                requests.post('http://140.112.18.227:5000/post/send_status', 
                              {'name': now_str, 
                               'status': 'ended'})
             except Exception:
