@@ -10,7 +10,7 @@ TAR_FILE = os.path.join(ROOT_DIR, 'hw2.tgz')
 
 DATA_PATH = {}
 DATA_PATH['fbank'] = os.path.join(DATA_DIR, 'fbank', 'train.ark')
-DATA_PATH['fbank'] = 'prob.csv'
+# DATA_PATH['fbank'] = 'prob.csv'
 DATA_PATH['test'] = os.path.join(DATA_DIR, 'fbank', 'test.ark')
 DATA_PATH['label'] = os.path.join(DATA_DIR, 'label', 'train.lab')
 DATA_PATH['48_idx_chr'] = os.path.join(DATA_DIR, 'phones', '48_idx_chr.map')
@@ -24,7 +24,8 @@ SVM_CLASSIFY_PATH = os.path.join(SVM_PATH, 'svm_python_classify')
 if not os.path.isdir(OUTPUT_PATH):
     os.makedirs(OUTPUT_PATH)
 
-FEATURE_DIM = 48
+FEATURE_DIM = 69
+# FEATURE_DIM = 48
 LABEL_DIM = 48
 
 def init_log_settings():

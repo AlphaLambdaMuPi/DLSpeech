@@ -81,7 +81,7 @@ def read_examples(filename, sparm):
     init()
     global gstartnum
     gstartnum = 0
-    d = read_models(gstartnum + 50)
+    d = read_models(gstartnum + 3)
     # bll, d = read_tmodels(3000)
     # global builtin_llabels
     # builtin_llabels = bll
@@ -193,21 +193,21 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     xx = np.array(x).reshape((LEN, FEATURE_DIM))
     xxt = np.dot(xx, obs.T)
 
-    # global global_y
-    # global hw1_big_matrix
-    # global gstartnum
-    # if hw1_big_matrix == None:
-        # hw1_big_matrix = read_hw1_matrix('submit_prob.csv', global_y)
-    # hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
-    # if hw1_matrix != None:
-        # xxt = hw1_matrix
+    global global_y
+    global hw1_big_matrix
+    global gstartnum
+    if hw1_big_matrix == None:
+        hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
+    hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
+    if hw1_matrix != None:
+        xxt = hw1_matrix
 
     y = []
     lgprob = np.zeros((LABEL_DIM,1))
     lst = []
 
     for i in range(LEN):
-        p = lgprob + trans + xxt[i,:] #/ 1.4
+        p = lgprob + trans + xxt[i,:] #* 1.5
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((LABEL_DIM,1))
