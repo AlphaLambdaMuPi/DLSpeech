@@ -12,6 +12,7 @@ def sigmoid(x):
     # return 1 / (1 + T.exp(-x))
     # return x / (1 + T.abs_(x))
     return T.maximum(x, 0)
+    # return T.maximum(x, 0) + 0.05 * T.minimum(x, 0)
     # return T.log(1+T.exp(x))
 
 x = T.dscalar('x')
@@ -84,9 +85,9 @@ class DNN:
         for i in range(self._L-1):
             newl = self._l[i]
             neww = self._w[i]
-            if i != 0:
-                # newl = (self._l[i] * self._r[i]) # / (1 - self._p)
-                neww = self._w[i] # * self._r[i] * self._prob / self._p
+            # if i != 0:
+                # #newl = (self._l[i] * self._r[i]) # / (1 - self._p)
+                # neww = self._w[i] * self._r[i] * self._prob / self._p
             if i == self._L-2:
                 layer = T.dot(newl, neww) + self._b[i]
             else:
@@ -106,7 +107,6 @@ class DNN:
             self._j_grad_b.append(T.grad(self._j, self._b[i]))
         self._eta = shared(np.asarray(0).astype(config.floatX))
 
-        self.plt_init()
 
     def plt_init(self):
         self.figure, self.ax = plt.subplots()
@@ -165,17 +165,17 @@ class DNN:
     def predict_func(self):
         return function([self._x], self._h)
 
-    def fit(self, X, YY, X_t, YY_t, N_epoch=20):
-        X = X.astype(config.floatX)
-        X_t = X_t.astype(config.floatX)
-        N_train = X.shape[0]
+    def fit(self, X, YY):
+        self.X = X.astype(config.floatX)
+        # self.X_t = X_t.astype(config.floatX)
+        self.YY = YY
+        # self.YY_t = YY_t
+        self.N_train = self.X.shape[0]
         # print(X, YY)
         self._K = int(np.max(YY)) + 1
-        Y = LabelToBinary(YY, self._K).astype(config.floatX)
-        Y_t = LabelToBinary(YY_t, self._K).astype(config.floatX)
+        self.Y = LabelToBinary(YY, self._K).astype(config.floatX)
+        # self.Y_t = LabelToBinary(YY_t, self._K).astype(config.floatX)
 
-        Batch_size = self._Batchsize
-        Batch_num = N_train // Batch_size
 
         # Eta = 5E-2
         # degrade_rate = 0.999995 #1 - 5E-2 * (Batch_size / N_train)
@@ -187,39 +187,37 @@ class DNN:
         momentum = self._Momentum
 
         self._eta.set_value(np.asarray(Eta).astype(config.floatX))
-        ufunc = self.update_func(degrade_rate, min_eta, momentum)
-        rfunc = self.realupdate_func()
+        self.ufunc = self.update_func(degrade_rate, min_eta, momentum)
+        self.rfunc = self.realupdate_func()
 
-        Ain = 0.0
-        Epoch = 0
+        self.Epoch = 0
 
         # x_shared = shared(X)
         # y_shared = shared(Y)
+        return self
 
-        current_j = self.target_value(X, Y)
+    def run_train(self, N_epoch=1):
         t0 = time.time()
         to_break = False
+
+        Batch_size = self._Batchsize
+        Batch_num = self.N_train // Batch_size
         for i in range(N_epoch * Batch_num):
             try:
                 Bno = i % Batch_num
                 b_start = Batch_size * Bno
                 b_end = b_start + Batch_size
-                X_mb = X[b_start:b_end,:]
-                Y_mb = Y[b_start:b_end,:]
+                X_mb = self.X[b_start:b_end,:]
+                Y_mb = self.Y[b_start:b_end,:]
                 self._p.set_value(self._prob)
-                ufunc(X_mb, Y_mb)
-                rfunc()
+                self.ufunc(X_mb, Y_mb)
+                self.rfunc()
                 if Bno == Batch_num - 1:
-                    Epoch += 1
-                    J = self.target_value(X, Y)
-                    yp = self.predict(X)
-                    Ain = label_error.calc_accuracy(YY, yp)
-                    yp_t = self.predict(X_t)
-                    Aval = label_error.calc_accuracy(YY_t, yp_t)
-                    print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}, \tAin = {4:.4f}, \tAval = {5:.4f}'.format(
-                        Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()), Ain, Aval)
+                    self.Epoch += 1
+                    J = self.target_value(self.X, self.Y)
+                    print('Epoch {0}, \tJ = {1:.5f}, \ttime = {2:.3f}, \teta = {3:.5f}'.format(
+                        self.Epoch, float(J), float(time.time()-t0), float(self._eta.get_value()))
                     )
-                    #TODO self.plt_refresh(Epoch, Ain, Aval)
                     t0 = time.time()
 
                     # new_eta = self._eta.get_value()
@@ -238,16 +236,16 @@ class DNN:
                         # bb = self._b[i].get_value()
                         # print(i, ww.mean(), ww.std(), bb.mean(), bb.std())
                     if to_break:
-                        break
+                        return False
                     
             except KeyboardInterrupt:
                 to_break = True
                 # break
 
         # print('Ain =', Ain)
-        return self
+        return True
 
-    def predict(self, X):
+    def predict(self, X, prob=False):
         self._p.set_value(1)
         X = X.astype(config.floatX)
         N_test = X.shape[0]
@@ -272,5 +270,7 @@ class DNN:
                 # newm[j] += yp[i]
         # yp = newm
 
+        if prob:
+            return yp
         return yp.argmax(axis=1)
 

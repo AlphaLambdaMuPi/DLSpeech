@@ -8,7 +8,7 @@ def preproc(X, num = 3):
     mats = []
 
     for i in range(-num, num, 1):
-        mats.append(np.concatenate((X[-i:, :], X[:-i, :]), axis=0))
+        mats.append(np.concatenate((X[-i*2:, :], X[:-i*2, :]), axis=0))
 
     return np.concatenate(mats, axis=1)
     # return preprocessing.normalize(X)

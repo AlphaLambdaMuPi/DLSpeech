@@ -219,7 +219,7 @@ def read_hw1input(path, Y):
 
 def read_hw1_matrix(path, Y):
     f = open(path)
-    ln = [[float(y) for y in x.strip('\n').split()] for x in f]
+    ln = [[float(y) for y in x.strip('\n').split()[1:]] for x in f]
     ln = np.array(ln)
 
     cnt = 0

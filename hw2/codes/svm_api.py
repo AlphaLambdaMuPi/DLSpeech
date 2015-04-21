@@ -26,7 +26,7 @@ phomap, phomap39, invphomap, labels = get_maps()
 phomap = read_map()
 phomap39 = read_map_39()
 labels = list(phomap.keys())
-label_list = [''] * 48
+label_list = [''] * LABEL_DIM
 builtin_llabels = []
 builtin_loutputs = []
 builtin_rawoutputs = []
@@ -35,7 +35,7 @@ hw1_big_matrix = None
 global_y = []
 gstartnum = 0
 real_losses = []
-
+timer = Timer()
 
 def parse_parameters(sparm):
     """Sets attributes of sparm based on command line arguments.
@@ -80,8 +80,8 @@ def read_examples(filename, sparm):
     from random import random, randint
     init()
     global gstartnum
-    gstartnum = 0
-    d = read_models(gstartnum + 1)
+    gstartnum = 3300
+    d = read_models(gstartnum + 100)
     # bll, d = read_tmodels(3000)
     # global builtin_llabels
     # builtin_llabels = bll
@@ -117,7 +117,7 @@ def init_model(sample, sm, sparm):
     # list of four features.  We just want a linear rule, so we have a
     # weight corresponding to each feature.  We also add one to allow
     # for a last "bias" feature.
-    sm.size_psi = 48*48+69*48
+    sm.size_psi = FEATURE_DIM*LABEL_DIM+LABEL_DIM*LABEL_DIM
 
 def init_constraints(sample, sm, sparm):
     """Initializes special constraints.
@@ -186,31 +186,31 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
 
 
     ql = list(sm.w)
-    obs = np.array(ql[:69*48]).reshape((48, 69))
-    trans = np.array(ql[69*48:]).reshape((48, 48))
+    obs = np.array(ql[:FEATURE_DIM*LABEL_DIM]).reshape((LABEL_DIM, FEATURE_DIM))
+    trans = np.array(ql[FEATURE_DIM*LABEL_DIM:]).reshape((LABEL_DIM, LABEL_DIM))
 
-    LEN = len(x) // 69
-    xx = np.array(x).reshape((LEN, 69))
+    LEN = len(x) // FEATURE_DIM
+    xx = np.array(x).reshape((LEN, FEATURE_DIM))
     xxt = np.dot(xx, obs.T)
 
-    global global_y
-    global hw1_big_matrix
-    global gstartnum
-    if hw1_big_matrix == None:
-        hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
-    hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
-    if hw1_matrix != None:
-        xxt = hw1_matrix
+    # global global_y
+    # global hw1_big_matrix
+    # global gstartnum
+    # if hw1_big_matrix == None:
+        # hw1_big_matrix = read_hw1_matrix('submit_prob.csv', global_y)
+    # hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
+    # if hw1_matrix != None:
+        # xxt = hw1_matrix
 
     y = []
-    lgprob = np.zeros((48,1))
+    lgprob = np.zeros((LABEL_DIM,1))
     lst = []
 
     for i in range(LEN):
-        p = lgprob + trans*0 + xxt[i,:] #/ 1.4
+        p = lgprob + trans + xxt[i,:] #/ 1.4
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
-        lgprob = np.max(p, axis=0).reshape((48,1))
+        lgprob = np.max(p, axis=0).reshape((LABEL_DIM,1))
 
     now = np.argmax(lgprob)
     y.append(now)
@@ -244,23 +244,23 @@ def find_most_violated_constraint(x, y, sm, sparm):
 
     timer.start('violate')
     ql = list(sm.w)
-    obs = np.array(ql[:69*48]).reshape((48, 69))
-    trans = np.array(ql[69*48:]).reshape((48, 48))
+    obs = np.array(ql[:FEATURE_DIM*LABEL_DIM]).reshape((LABEL_DIM, FEATURE_DIM))
+    trans = np.array(ql[FEATURE_DIM*LABEL_DIM:]).reshape((LABEL_DIM, LABEL_DIM))
 
-    LEN = len(x) // 69
-    xx = np.array(x).reshape((LEN, 69))
+    LEN = len(x) // FEATURE_DIM
+    xx = np.array(x).reshape((LEN, FEATURE_DIM))
     xxt = np.dot(xx, obs.T)
 
     yy = []
-    lgprob = np.zeros((48,1))
+    lgprob = np.zeros((LABEL_DIM,1))
     lst = []
 
     for i in range(LEN):
-        # ylab = np.ones((1,48))
+        # ylab = np.ones((1,LABEL_DIM))
         # ylab[0,phomap[y[i]][0]] = 0
         alpha = np.array((i == 0) or (y[i] != y[i-1]))
-        beta = (~np.identity(48, dtype=bool)) | (i == 0)
-        gamma = np.zeros((1,48))
+        beta = (~np.identity(LABEL_DIM, dtype=bool)) | (i == 0)
+        gamma = np.zeros((1,LABEL_DIM))
         gamma[0,ph2id(y[i])] = 1
         gamma = gamma * (alpha | beta)
         alpha = alpha.astype(float)
@@ -270,7 +270,7 @@ def find_most_violated_constraint(x, y, sm, sparm):
         # p = lgprob + trans + xxt[i,:] + ylab
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
-        lgprob = np.max(p, axis=0).reshape((48,1))
+        lgprob = np.max(p, axis=0).reshape((LABEL_DIM,1))
 
     now = np.argmax(lgprob)
     yy.append(now)

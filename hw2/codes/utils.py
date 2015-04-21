@@ -1,9 +1,10 @@
 from read_input import read_map, read_map_39
 from phone_maps import *
+from settings import *
 
 def phi(dt, mp):
-    PHONES = 48
-    FBANKS = 69
+    PHONES = LABEL_DIM
+    FBANKS = FEATURE_DIM
     DIMS = PHONES * FBANKS + PHONES * PHONES
     res = [0.0] * DIMS
 
@@ -29,8 +30,8 @@ def phi(dt, mp):
     return res
 
 def varpsi(X, Y, mp):
-    PHONES = 48
-    FBANKS = 69
+    PHONES = LABEL_DIM
+    FBANKS = FEATURE_DIM
     DIMS = PHONES * FBANKS + PHONES * PHONES
     res = [0.0] * DIMS
 
