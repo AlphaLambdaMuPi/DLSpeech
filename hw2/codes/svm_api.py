@@ -242,7 +242,6 @@ def find_most_violated_constraint(x, y, sm, sparm):
     risk bound condition, but without any regularization."""
     # return ['aa'] * (len(x) // 69)
 
-    timer.start('violate')
     ql = list(sm.w)
     obs = np.array(ql[:FEATURE_DIM*LABEL_DIM]).reshape((LABEL_DIM, FEATURE_DIM))
     trans = np.array(ql[FEATURE_DIM*LABEL_DIM:]).reshape((LABEL_DIM, LABEL_DIM))
@@ -390,7 +389,6 @@ def loss(y, ybar, sparm=None):
     y==ybar."""
     # If they're the same sign, then the loss should be 0.
 
-    timer.start('loss')
     cnt = 0
     yl = ''
     ybl = ''
@@ -406,7 +404,6 @@ def loss(y, ybar, sparm=None):
         if (alpha or beta) and (y[i] == ybar[i]):
             cnt -= 2
 
-    timer.stop('loss')
     #print('Time used: {}, total used: {}'.format(
     #    timer.get('loss'), timer.get()))
     return cnt

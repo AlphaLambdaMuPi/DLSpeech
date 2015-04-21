@@ -9,7 +9,7 @@ import requests
 def main():
 
     record = True
-    print('Enter a name (default = yapsilon) or konkon if you dont want to '
+    print('Enter a name (default = kon) or konkon if you dont want to '
           'record')
     name = input()
     if name == 'konkon':
@@ -32,6 +32,15 @@ def main():
     if not record: cmd = cmd[:-1]
 
     catchEps = re.compile(r'CEps=(\d+\.\d*),')
+    catchData = re.compile(r'>>>\s*\[([^\]]*)\].*\(([^\)]*)\)')
+    try:
+        requests.post('http://140.112.18.227:5000/send_status', 
+                     {'name': now_str, 
+                      'status': 'new',
+                      'type': 'svm',
+                      'time_stamp': str(datetime.now())})
+    except Exception:
+        pass
 
     with subprocess.Popen(cmd, stdout=subprocess.PIPE,
                           bufsize=10) as p:
@@ -41,11 +50,32 @@ def main():
                 print(s)
                 mt = catchEps.search(s)
                 if mt:
-                    requests.post('http://140.112.18.227:5000/send', 
-                                 {'name': now_str, 
-                                  'value': mt.group(1),
-                                  'time_stamp': str(datetime.now())})
+                    try:
+                        requests.post('http://140.112.18.227:5000/send_data', 
+                                     {'name': now_str, 
+                                      'item': 'CEps',
+                                      'value': mt.group(1),
+                                      'time_stamp': str(datetime.now())})
+                    except Exception:
+                        pass
+                mt = catchData.search(s)
+                if mt:
+                    try:
+                        requests.post('http://140.112.18.227:5000/send_data', 
+                                     {'name': now_str, 
+                                      'item': mt.group(1),
+                                      'value': mt.group(2),
+                                      'time_stamp': str(datetime.now())})
+                    except Exception:
+                        pass
+
         except KeyboardInterrupt:
+            try:
+                requests.post('http://140.112.18.227:5000/send_status', 
+                             {'name': now_str, 
+                              'status': 'ended'})
+            except Exception:
+                pass
             p.terminate()
             os.kill(p.pid, 0)
 
