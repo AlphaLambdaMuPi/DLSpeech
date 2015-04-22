@@ -201,6 +201,7 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     xx = np.array(x).reshape((LEN, FEATURE_DIM))
     xxt = np.dot(xx, obs.T)
 
+<<<<<<< ours
     global global_y
     global hw1_big_matrix
     global gstartnum
@@ -209,6 +210,16 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
     if hw1_matrix is not None:
         xxt = hw1_matrix
+=======
+    # global global_y
+    # global hw1_big_matrix
+    # global gstartnum
+    # if hw1_big_matrix == None:
+        # hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
+    # hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
+    # if hw1_matrix != None:
+        # xxt = hw1_matrix
+>>>>>>> theirs
 
     # global bigphi
     # trans = np.array(bigphi[FEATURE_DIM*LABEL_DIM:]).reshape((LABEL_DIM, LABEL_DIM)) / 1500
