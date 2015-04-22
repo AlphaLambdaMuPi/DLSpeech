@@ -3,3 +3,4 @@ submit_prob.csv
 *.out
 svm_python_learn
 svm_python_classify
+*.csv
