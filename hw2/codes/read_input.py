@@ -151,7 +151,7 @@ def read_map_39():
         for line in f:
             line = line.rstrip('\n')
             datas = line.split('\t')
-            res[datas[0]] = datas[1]
+            res[datas[0]] = datas[-1]
     logger.info('Read 39 map done ... ')
     global mp39res
     mp39res = res

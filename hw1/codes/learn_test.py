@@ -84,13 +84,13 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
 
     # print(clf.best_params_)
 
-    MSIZE = 5
+    MSIZE = 1
     models = []
     for i in range(MSIZE):
         x = DNN(
             dims,
             Eta = 0.002, Drate = 0.99998, Minrate = 0.2, Momentum = 0.9, 
-            Batchsize = 128
+            Batchsize = 100
         )
         L = X_train.shape[0]
         Rate = 0.8
@@ -98,8 +98,11 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
             Rate = 1
         TL = int(L * Rate)
         perm = np.random.permutation(L)[:TL]
-        x.fit(X_train[perm], Y_train[perm])
+        # x.fit(X_train[perm], Y_train[perm])
+        x.fit(X_train, Y_train)
         models.append(x)
+
+    # epoch = 30
     
     models[0].plt_init()
     for i in range(epoch):
@@ -147,10 +150,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     return Aval, models
 
 def main():
-
-
-
-    DATA_SIZE = 10000
+    DATA_SIZE = 100000
     X = read_data.read_feature(FEATURE_PATH, DATA_SIZE)
     Y = read_data.read_label(LABEL_PATH, P48_39_PATH, DATA_SIZE)
     print(type(X))
@@ -181,6 +181,8 @@ def main():
     Y_train = Y[:train_size]
     Y_test = Y[train_size:]
 
+    del X, Y
+
     # Alpha, Beta, Gamma = mnist.load_data('mnist3.pkl.gz')
     # X_train, Y_train = Alpha
     # X_test, Y_test = Gamma
@@ -194,6 +196,8 @@ def main():
         pass
 
     Aval, models = train_experiment(X_train, Y_train, X_test, Y_test, 2000)
+
+    del X_train, X_test, Y_train, Y_test, perm
     
     try:
         requests.post('http://140.112.18.227:5000/post/send_status', 
@@ -203,16 +207,14 @@ def main():
     except Exception:
         pass
 
-    del X_train, X_test, Y_train, Y_test, perm
-    del X, Y
 
     # predict_submit(models, SUBMIT_FEATURE_PATH_2, os.path.join(SUBMIT_PATH, 'test.csv'), P48_39_PATH)
     # predict_submit(models, SUBMIT_FEATURE_PATH_2, os.path.join(SUBMIT_PATH, 'feature.csv'), P48_39_PATH)
     # predict_prob(models, SUBMIT_FEATURE_PATH_2, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
 
-    predict_submit(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit.csv'), P48_39_PATH)
-    predict_prob(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit_prob.csv'), P48_39_PATH)
-    predict_prob(models, FEATURE_PATH, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
+    # predict_submit(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit.csv'), P48_39_PATH)
+    # predict_prob(models, SUBMIT_FEATURE_PATH, os.path.join(SUBMIT_PATH, 'submit_prob.csv'), P48_39_PATH)
+    # predict_prob(models, FEATURE_PATH, os.path.join(SUBMIT_PATH, 'prob.csv'), P48_39_PATH)
     
     # orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
     # sort_label(orig_path + 'fbank/train.ark', orig_path + 'state_label/train.lab', 

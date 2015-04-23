@@ -13,8 +13,10 @@ Easy Test Data
 '''
 ORIG_PATH = path.abspath('../../hw2/data')
 FEATURE_PATH = path.join(ORIG_PATH, 'fbank', 'train.ark')
-LABEL_PATH = path.join(ORIG_PATH, 'label', 'train.lab')
+LABEL_PATH = path.join(ORIG_PATH, 'label', 'train.lab2')
+# LABEL_PATH = path.join(ORIG_PATH, 'state_label', 'train_sorted.lab')
 P48_39_PATH = path.join(ORIG_PATH, 'phones', '48_39.map')
+# P48_39_PATH = path.join(ORIG_PATH, 'phones', 'state_48_39.map')
 
 SUBMIT_FEATURE_PATH = path.join(ORIG_PATH, 'fbank', 'test.ark')
 SUBMIT_FEATURE_PATH_2 = '../easy_data/train_100000.ark'
