@@ -45,7 +45,7 @@ def parse_parameters(sparm):
     custom command line arguments.  The custom command line arguments
     are stored in sparm.argv as a list of strings.  The custom command
     lines are stored in '--option', then 'value' sequence.
-    
+
     If this function is not implemented, any custom command line
     arguments are ignored and sparm remains unchanged."""
     sparm.arbitrary_parameter = 'I am an arbitrary parameter!'
@@ -82,10 +82,10 @@ def read_examples(filename, sparm):
     init()
     global gstartnum
     gstartnum = 0
-    d = read_models(gstartnum + 5000)
-    # bll, d = read_tmodels(3000)
-    # global builtin_llabels
-    # builtin_llabels = bll
+    # d = read_models(gstartnum + 5000)
+    bll, d = read_tmodels(3000)
+    global builtin_llabels
+    builtin_llabels = bll
 
     global global_y
     global_y = [y for x, y in d]
@@ -174,16 +174,6 @@ def init_constraints(sample, sm, sparm):
         # constraints.append((lhs, 0))
     return constraints
 
-def wdotphi(x, y, sm):
-    # return svmapi.Sparse(sm.w) * psi(x, y)
-    sp = psi(x, y)
-    totlen = sm.size_psi
-    res = np.zeros(totlen)
-    for i, j in sp:
-        res[i] = j
-    return np.dot(list(sm.w), res)
-
-    
 def classify_example(x, sm, sparm, hw1_matrix=None):
     """Given a pattern x, return the predicted label."""
     # Believe it or not, this is a dot product.  The last element of
@@ -203,7 +193,7 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     global hw1_big_matrix
     global gstartnum
     if hw1_big_matrix is None:
-        hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
+        hw1_big_matrix = read_hw1_matrix('submit_prob.csv', global_y)
     hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
     if hw1_matrix is not None:
         xxt = hw1_matrix
@@ -216,7 +206,7 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     lst = []
 
     for i in range(LEN):
-        p = lgprob + trans + xxt[i,:] #/ 1.2
+        p = lgprob + trans + xxt[i,:] * 1.2
         newlst = np.argmax(p, axis=0)
         lst.append(newlst)
         lgprob = np.max(p, axis=0).reshape((LABEL_DIM,1))

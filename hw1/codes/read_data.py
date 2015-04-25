@@ -25,7 +25,6 @@ def read_label(path, pmpath, datasize=1E9):
     arr = []
     data_count = 0
 
-    
     with open(path) as f:
         for line in f:
             x = line.strip('\n').split(',')
@@ -37,6 +36,23 @@ def read_label(path, pmpath, datasize=1E9):
     print('Label readed : {0}'.format(data_count))
     # return label_error.transform_label(np.array(arr))
     return np.array(arr)
+
+def read_group_label(path, pmpath, lab, datasize=1E9):
+    Y = read_label(path, pmpath, datasize)
+    last_label = ''
+    ret = []
+    nowy = []
+    for f, l in zip(Y, lab):
+        pfx = l[:l.rfind('_')]
+        if pfx != last_label:
+            if last_label != '':
+                ret.append(np.array(nowy))
+            last_label = pfx
+            nowy = []
+        nowy.append(f)
+    ret.append(np.array(nowy))
+    ret = np.array(ret)
+    return ret
 
 def read_feature(path, datasize=10**9, label=False):
     arr = []
@@ -56,11 +72,29 @@ def read_feature(path, datasize=10**9, label=False):
         if data_count >= datasize:
             break
 
-    print('Feature readed : {0}'.format(data_count))
+    print('Feature readed : {}'.format(data_count))
 
     ret = preproc(np.array(arr))
-    print(label, type(ret))
     return (ret, lab) if label else ret
+
+def read_group_feature(path, datasize=10**9, label=False):
+    feat, lab = read_feature(path, datasize, True)
+    last_label = ''
+    lablist = []
+    featlist = []
+    nowx = []
+    for f, l in zip(feat, lab):
+        pfx = l[:l.rfind('_')]
+        if pfx != last_label:
+            if last_label != '':
+                featlist.append(np.array(nowx))
+            nowx = []
+            last_label = pfx
+        nowx.append(f)
+    featlist.append(np.array(nowx))
+    featlist = np.array(featlist)
+    print('Group count : {}'.format(len(featlist)))
+    return (featlist, lablist, lab) if label else featlist
 
 def sort_label(fpath, lpath, newlpath):
     names = []
@@ -76,15 +110,9 @@ def sort_label(fpath, lpath, newlpath):
     f.close()
 
 def main():
-
     DATA_SIZE = 10E33
     X = read_feature(FEATURE_PATH, DATA_SIZE)
     Y = read_label(LABEL_PATH, P48_39_PATH, DATA_SIZE)
-    # print(X, Y)
-    
-    # orig_path = '/home/step5/MLDS_Data/MLDS_HW1_RELEASE_v1/'
-    # sort_label(orig_path + 'fbank/train.ark', orig_path + 'state_label/train.lab', 
-               # orig_path + 'state_label/train_sorted.lab')
 
 if __name__ == '__main__':
     main()
