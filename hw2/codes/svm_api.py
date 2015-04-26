@@ -20,6 +20,7 @@ from read_input import read_train_datas, read_map, read_models, read_tmodels, \
 from utils import varpsi, answer, delta, answer39
 from timer import Timer
 from phone_maps import *
+from smoothing import smo1
 pho_init()
 phomap, phomap39, invphomap, labels = get_maps()
 
@@ -84,7 +85,11 @@ def read_examples(filename, sparm):
     init()
     global gstartnum
     gstartnum = 0
+<<<<<<< ours
     d = read_models(gstartnum + 5000)
+=======
+    d = read_models(gstartnum + 100)
+>>>>>>> theirs
     # bll, d = read_tmodels(3000)
     # global builtin_llabels
     # builtin_llabels = bll
