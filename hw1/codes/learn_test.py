@@ -95,7 +95,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     for i in range(MSIZE):
         x = DNN(
             dims,
-            Eta = 0.0005, Drate = 0.9998, Minrate = 0.2, Momentum = 0.9, 
+            Eta = 0.0005, Drate = 0.998, Minrate = 0.2, Momentum = 0.9, 
             Batchsize = 16,
             K = K,
         )

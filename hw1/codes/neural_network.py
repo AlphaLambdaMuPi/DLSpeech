@@ -97,7 +97,14 @@ class DNN:
         layer = T.concatenate((l1, l2), axis=2)
         return layer, w1+w2, wd1+wd2
 
-    def lstm_layer(self, prev_layer, prev_dim, dim):
+    def bidirectional_lstm_layer(self, prev_layer, prev_dim, dim):
+        pdim = prev_layer.shape[2]
+        l1, w1, wd1 = self.lstm_layer(prev_layer, prev_dim, dim // 2)
+        l2, w2, wd2 = self.lstm_layer(prev_layer, prev_dim, dim // 2, backward=True)
+        layer = T.concatenate((l1, l2), axis=2)
+        return layer, w1+w2, wd1+wd2
+
+    def lstm_layer(self, prev_layer, prev_dim, dim, backward=False):
         alpha = (prev_dim + dim) ** 0.5
         ia = 1 / alpha
         wlist, wdlist = self.new_parameters([
@@ -114,10 +121,10 @@ class DNN:
             ((prev_dim, dim), ia),
             ((dim, dim), ia),
             (dim, ia),
-            (dim, ia),
-            (dim, ia),
-            (dim, ia),
-            (dim, ia),
+            (dim, 1),
+            (dim, 1),
+            (dim, 1),
+            (dim, 1),
         ])
         h0, c0, wxi, whi, wci, wxf, whf, wcf, wxc, whc, wxo, who, wco, bi, bf, bc, bo = wlist
         tmph = h0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
@@ -128,11 +135,14 @@ class DNN:
             ft = sigmoid(T.dot(x, wxf) + T.dot(hp, whf) + cp * wcf + bf)
             ot = sigmoid(T.dot(x, wxo) + T.dot(hp, who) + cp * wco + bo)
             ct = ft * cp + it * T.tanh(T.dot(x, wxc) + T.dot(hp, whc) + bc)
+            # ct = ft * cp + it * relu(T.dot(x, wxc) + T.dot(hp, whc) + bc)
             ht = ot * T.tanh(ct)
+            # ht = ot * relu(ct)
             return [ht, ct]
         [layer, cl], _ = scan(fn=func, 
                         sequences=prev_layer, 
                         outputs_info=[tmph, tmpc],
+                        go_backwards=backward,
                         # truncate_gradient=20
                         )
         return layer, wlist, wdlist
@@ -178,10 +188,11 @@ class DNN:
             if i == self._L-1:
                 layer, wlist, wdeltalist = self.output_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
             else:
+                layer, wlist, wdeltalist = self.bidirectional_lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.feedforward_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
-                layer, wlist, wdeltalist = self.bidirectional_recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                # layer, wlist, wdeltalist = self.bidirectional_recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
 
             self._l.append(layer)
             self._w.extend(wlist)
@@ -195,9 +206,10 @@ class DNN:
         yln = self._y * T.log(dotted / dsm)
 
         self._j = - T.sum(yln) / self._x.shape[1]
-        self._j_grad_w = []
-        for i in range(len(self._w)):
-            self._j_grad_w.append(T.grad(self._j, self._w[i], disconnected_inputs='ignore'))
+        # self._j_grad_w = []
+        # for i in range(len(self._w)):
+            # self._j_grad_w.append(T.grad(self._j, self._w[i], disconnected_inputs='ignore'))
+        self._j_grad_w = T.grad(self._j, self._w, disconnected_inputs='ignore')
 
         self._eta = shared(np.asarray(0).astype(config.floatX))
 
