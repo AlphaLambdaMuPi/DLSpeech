@@ -71,7 +71,7 @@ class DNN:
         layer = relu(T.dot(prev_layer, wlh) + b)
         return layer, [wlh, b], [wlh_delta, b_delta]
 
-    def recurrent_layer(self, prev_layer, prev_dim, dim):
+    def recurrent_layer(self, prev_layer, prev_dim, dim, backward=False):
         alpha = (prev_dim + dim) ** 0.5
         wlist, wdlist = self.new_parameters([
             (dim, 1),
@@ -80,43 +80,62 @@ class DNN:
             (dim, 1 / alpha),
         ])
         h0, wlh, whh, b = wlist
-        # h0 = shared(self.rng.randn(dim).astype(config.floatX))
-        # h0_delta = shared(np.zeros(dim).astype(config.floatX))
-        # wlh = shared(self.rng.randn(prev_dim, dim).astype(config.floatX) / alpha)
-        # wlh_delta = shared(np.zeros((prev_dim, dim)).astype(config.floatX))
-        # whh = shared(self.rng.randn(dim, dim).astype(config.floatX) / alpha)
-        # whh_delta = shared(np.zeros((dim, dim)).astype(config.floatX))
-        # b = shared(self.rng.randn(dim).astype(config.floatX) / alpha)
-        # b_delta = shared(np.zeros(dim).astype(config.floatX))
         tmp = h0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
 
         def func(x, lp):
             return relu(T.dot(x, wlh) + T.dot(lp, whh) + b)
         layer, _ = scan(fn=func, 
                         sequences=prev_layer, 
-                        outputs_info=tmp)
+                        outputs_info=tmp,
+                        go_backwards=backward)
         return layer, wlist, wdlist
+    
+    def bidirectional_recurrent_layer(self, prev_layer, prev_dim, dim):
+        pdim = prev_layer.shape[2]
+        l1, w1, wd1 = self.recurrent_layer(prev_layer, prev_dim, dim // 2)
+        l2, w2, wd2 = self.recurrent_layer(prev_layer, prev_dim, dim // 2, backward=True)
+        layer = T.concatenate((l1, l2), axis=2)
+        return layer, w1+w2, wd1+wd2
 
     def lstm_layer(self, prev_layer, prev_dim, dim):
         alpha = (prev_dim + dim) ** 0.5
-        h0 = shared(self.rng.randn(dim).astype(config.floatX))
-        h0_delta = shared(np.zeros(dim).astype(config.floatX))
-        c0 = shared(self.rng.randn(dim).astype(config.floatX))
-        c0_delta = shared(np.zeros(dim).astype(config.floatX))
-        wlh = shared(self.rng.randn(prev_dim, dim).astype(config.floatX) / alpha)
-        wlh_delta = shared(np.zeros((prev_dim, dim)).astype(config.floatX))
-        whh = shared(self.rng.randn(dim, dim).astype(config.floatX) / alpha)
-        whh_delta = shared(np.zeros((dim, dim)).astype(config.floatX))
-        b = shared(self.rng.randn(dim).astype(config.floatX) / alpha)
-        b_delta = shared(np.zeros(dim).astype(config.floatX))
-        tmp = h0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
+        ia = 1 / alpha
+        wlist, wdlist = self.new_parameters([
+            (dim, 1),
+            (dim, 1),
+            ((prev_dim, dim), ia),
+            ((dim, dim), ia),
+            (dim, ia),
+            ((prev_dim, dim), ia),
+            ((dim, dim), ia),
+            (dim, ia),
+            ((prev_dim, dim), ia),
+            ((dim, dim), ia),
+            ((prev_dim, dim), ia),
+            ((dim, dim), ia),
+            (dim, ia),
+            (dim, ia),
+            (dim, ia),
+            (dim, ia),
+            (dim, ia),
+        ])
+        h0, c0, wxi, whi, wci, wxf, whf, wcf, wxc, whc, wxo, who, wco, bi, bf, bc, bo = wlist
+        tmph = h0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
+        tmpc = c0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
 
-        def func(x, lp):
-            return relu(T.dot(x, wlh) + T.dot(lp, whh) + b)
-        layer, _ = scan(fn=func, 
+        def func(x, hp, cp):
+            it = sigmoid(T.dot(x, wxi) + T.dot(hp, whi) + cp * wci + bi)
+            ft = sigmoid(T.dot(x, wxf) + T.dot(hp, whf) + cp * wcf + bf)
+            ot = sigmoid(T.dot(x, wxo) + T.dot(hp, who) + cp * wco + bo)
+            ct = ft * cp + it * T.tanh(T.dot(x, wxc) + T.dot(hp, whc) + bc)
+            ht = ot * T.tanh(ct)
+            return [ht, ct]
+        [layer, cl], _ = scan(fn=func, 
                         sequences=prev_layer, 
-                        outputs_info=tmp)
-        return layer, [h0, wlh, whh, b], [h0_delta, wlh_delta, whh_delta, b_delta]
+                        outputs_info=[tmph, tmpc],
+                        # truncate_gradient=20
+                        )
+        return layer, wlist, wdlist
 
     def output_layer(self, prev_layer, prev_dim, dim):
         alpha = (prev_dim + dim) ** 0.5
@@ -159,8 +178,10 @@ class DNN:
             if i == self._L-1:
                 layer, wlist, wdeltalist = self.output_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
             else:
-                layer, wlist, wdeltalist = self.recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                # layer, wlist, wdeltalist = self.lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                # layer, wlist, wdeltalist = self.recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.feedforward_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                layer, wlist, wdeltalist = self.bidirectional_recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
 
             self._l.append(layer)
             self._w.extend(wlist)

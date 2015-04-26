@@ -59,7 +59,7 @@ def train_experiment(X_train, Y_train, X_test, Y_test, epoch=20):
     # print(np.mean(X_train, axis=0))
     # model = linear_model.LogisticRegression()
     K = max([np.max(z) for z in Y_train]) + 1
-    dims = [X_train[0].shape[1], 300, 300, 300, K]
+    dims = [X_train[0].shape[1], 100, 100, 100, K]
     # param_grid = [
           # {
               # 'Dims': [dims],
