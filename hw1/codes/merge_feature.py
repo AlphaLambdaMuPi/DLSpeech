@@ -1,4 +1,4 @@
-from settings import *
+from settings1 import *
 from read_data import read_feature
 
 def main():

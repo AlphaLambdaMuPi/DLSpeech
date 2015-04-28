@@ -82,10 +82,10 @@ def read_examples(filename, sparm):
     init()
     global gstartnum
     gstartnum = 0
-    # d = read_models(gstartnum + 5000)
-    bll, d = read_tmodels(3000)
-    global builtin_llabels
-    builtin_llabels = bll
+    d = read_models(gstartnum + 5000)
+    # bll, d = read_tmodels(3000)
+    # global builtin_llabels
+    # builtin_llabels = bll
 
     global global_y
     global_y = [y for x, y in d]
@@ -193,7 +193,7 @@ def classify_example(x, sm, sparm, hw1_matrix=None):
     global hw1_big_matrix
     global gstartnum
     if hw1_big_matrix is None:
-        hw1_big_matrix = read_hw1_matrix('submit_prob.csv', global_y)
+        hw1_big_matrix = read_hw1_matrix('prob.csv', global_y)
     hw1_matrix = hw1_big_matrix[gstartnum + len(builtin_loutputs)]
     if hw1_matrix is not None:
         xxt = hw1_matrix

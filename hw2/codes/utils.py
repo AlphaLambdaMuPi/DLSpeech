@@ -68,9 +68,10 @@ def delta(s1, s2):
     return pv[-1]
 
 
-def answer(l):
-    return answer39(l)
-    seq = [phomap[x][1] for x in l]
+def answer(l, SN = True):
+    if SN:
+        return answer39(l)
+    seq = [ph2c(x) for x in l]
     s = ''.join(seq)
     s = s.strip(ph2c('sil'))
 

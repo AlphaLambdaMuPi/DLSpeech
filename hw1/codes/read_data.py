@@ -2,12 +2,12 @@ import numpy as np
 import label_error
 from sklearn import preprocessing
 
-from settings import *
+from settings1 import *
 
-def preproc(X, num = 3):
+def preproc(X, num = 2):
     mats = []
 
-    for i in range(-num, num, 1):
+    for i in range(-num, num+1, 1):
         mats.append(np.concatenate((X[-i*2:, :], X[:-i*2, :]), axis=0))
 
     Iks = np.concatenate(mats, axis=1)

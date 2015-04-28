@@ -60,9 +60,27 @@ class DNN:
             w_delta.append(ww_delta)
         return w, w_delta
 
+    def slice_parameters(self, w, dims):
+        cnt = 0
+        ret = []
+        for d in dims:
+            if w.ndim == 2:
+                ret.append(w[:,cnt:cnt+d])
+            else:
+                ret.append(w[cnt:cnt+d])
+            cnt += d
+        return ret
+
+    def set_noise(self, sigma):
+        udlist = []
+        for i in range(len(self._w)):
+            rnd = self.srng.normal(self._w[i].shape, std=sigma, dtype=config.floatX)
+            udlist.append((self._w[i], self._w[i] + rnd))
+        ret = function([], None, updates=udlist)
+        return ret
 
     def feedforward_layer(self, prev_layer, prev_dim, dim):
-        alpha = (prev_dim + dim) ** 0.5
+        alpha = prev_dim ** 0.5
         wlh = shared(self.rng.randn(prev_dim, dim).astype(config.floatX) / alpha)
         wlh_delta = shared(np.zeros((prev_dim, dim)).astype(config.floatX))
         b = shared(self.rng.randn(dim).astype(config.floatX) / alpha)
@@ -87,7 +105,9 @@ class DNN:
         layer, _ = scan(fn=func, 
                         sequences=prev_layer, 
                         outputs_info=tmp,
-                        go_backwards=backward)
+                        go_backwards=backward,
+                        # truncate_gradient=20
+                        )
         return layer, wlist, wdlist
     
     def bidirectional_recurrent_layer(self, prev_layer, prev_dim, dim):
@@ -110,31 +130,36 @@ class DNN:
         wlist, wdlist = self.new_parameters([
             (dim, 1),
             (dim, 1),
-            ((prev_dim, dim), ia),
-            ((dim, dim), ia),
-            (dim, ia),
-            ((prev_dim, dim), ia),
-            ((dim, dim), ia),
-            (dim, ia),
-            ((prev_dim, dim), ia),
-            ((dim, dim), ia),
-            ((prev_dim, dim), ia),
-            ((dim, dim), ia),
-            (dim, ia),
-            (dim, 1),
-            (dim, 1),
-            (dim, 1),
-            (dim, 1),
+            ((prev_dim, 4 * dim), ia),
+            ((dim, 4 * dim), ia),
+            (3 * dim, ia),
+            (4 * dim, ia),
         ])
-        h0, c0, wxi, whi, wci, wxf, whf, wcf, wxc, whc, wxo, who, wco, bi, bf, bc, bo = wlist
+        # h0, c0, wxi, whi, wci, wxf, whf, wcf, wxc, whc, wxo, who, wco, bi, bf, bc, bo = wlist
+        h0, c0, wx, wh, wc1, b = wlist
+        # h0, c0, wx, wh, b = wlist
         tmph = h0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
         tmpc = c0.dimshuffle('x', 0) + T.zeros((prev_layer.shape[1], dim))
 
+        # ds1 = [3*dim, dim]
+        # wx1, wxc = self.slice_parameters(wx, ds1)
+        # wh1, whc = self.slice_parameters(wh, ds1)
+        # b1, bc = self.slice_parameters(b, ds1)
+        wci, wcf, wco = self.slice_parameters(wc1, [dim, dim, dim])
+
         def func(x, hp, cp):
-            it = sigmoid(T.dot(x, wxi) + T.dot(hp, whi) + cp * wci + bi)
-            ft = sigmoid(T.dot(x, wxf) + T.dot(hp, whf) + cp * wcf + bf)
-            ot = sigmoid(T.dot(x, wxo) + T.dot(hp, who) + cp * wco + bo)
-            ct = ft * cp + it * T.tanh(T.dot(x, wxc) + T.dot(hp, whc) + bc)
+            # qt = sigmoid(T.dot(x, wx1) + T.dot(hp, wh1) + cp * wc1 + b1)
+            qt = T.dot(x, wx) + T.dot(hp, wh) + b
+            # it = sigmoid(T.dot(x, wxi) + T.dot(hp, whi) + cp * wci + bi)
+            # ft = sigmoid(T.dot(x, wxf) + T.dot(hp, whf) + cp * wcf + bf)
+            # ot = sigmoid(T.dot(x, wxo) + T.dot(hp, who) + cp * wco + bo)
+            # it, ft, ot = self.slice_parameters(qt, [dim, dim, dim])
+            it, ft, ot, ct = self.slice_parameters(qt, [dim, dim, dim, dim])
+            it = sigmoid(it + cp * wci)
+            ft = sigmoid(ft + cp * wcf)
+            ot = sigmoid(ot + cp * wco)
+
+            ct = ft * cp + it * T.tanh(ct)
             # ct = ft * cp + it * relu(T.dot(x, wxc) + T.dot(hp, whc) + bc)
             ht = ot * T.tanh(ct)
             # ht = ot * relu(ct)
@@ -157,8 +182,45 @@ class DNN:
         layer = T.dot(prev_layer, wlh) + b
         return layer, [wlh, b], [wlh_delta, b_delta]
 
+    def negative_log_likelihood(self, h):
+        dotted = T.exp(h)
+        dsm = T.sum(dotted, axis=2).dimshuffle(0, 1, 'x')
+        yln = self._y * T.log(dotted / dsm)
+        j = - T.sum(yln) / self._x.shape[1]
+        return j
+    
+    def add_hmm_weight(self):
+        wlh = shared(np.zeros((self._K, self._K)).astype(config.floatX))
+        wlh_delta = shared(np.zeros((self._K, self._K)).astype(config.floatX))
+        self._w.append(wlh)
+        self._w_delta.append(wlh_delta)
+
+    def hmm_cost(self, h):
+        dotted = T.exp(h)
+        dsm = T.sum(dotted, axis=2).dimshuffle(0, 1, 'x')
+        yln = self._y * T.log(dotted / dsm)
+        j1 = -T.sum(yln) / self._x.shape[1]
+
+        ws = T.log(T.sum(T.exp(self._w[-1]), axis=1))
+        lw = - (self._w[-1] - ws)
+        p0 = T.zeros((self._x.shape[1], self._K))
+        t0 = T.zeros((self._x.shape[1], ))
+        def func(y, prv, pb):
+            alp = T.sum(y * T.dot(prv, lw), axis=1)
+            return [y, pb + alp]
+
+        [trash, s2], _ = scan(fn=func, 
+                        sequences=self._y, 
+                        outputs_info=[p0, t0],
+                        )
+        j2 = T.sum(s2) / self._x.shape[1]
+        return j1 + j2 * 0.005
+
+    def ctc_cost(self, h):
+        pass
+
     def __init__(self, Dims = [1, 1], 
-                 Eta = 0.03, Drate = 0.999998, Minrate = 0.2, Momentum = 0.9,
+                 Eta = 0.0001, Drate = 0.9998, Minrate = 0.2, Momentum = 0.9,
                  Batchsize = 128, K = 48):
         self._Dims = Dims
         self._Eta = Eta
@@ -175,43 +237,40 @@ class DNN:
         # self._x = T.TensorType(dtype=config.floatX, broadcastable=())('x')
         # T.addbroadcast(self._x, 1)
         self._y = T.tensor3('y', config.floatX)
-        # self._prob = 0.5
-        # self._dropout = False
-        # self._p = shared(np.array(self._prob).astype(config.floatX))
+        self._prob = 0.5
+        self._dropout = False
         self._w = []
         self._w_delta = []
         self._best_w = []
         self._l = [self._x]
-        # self._r = []
 
         for i in range(1, self._L):
             if i == self._L-1:
                 layer, wlist, wdeltalist = self.output_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
             else:
-                layer, wlist, wdeltalist = self.bidirectional_lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                # layer, wlist, wdeltalist = self.bidirectional_lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.lstm_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
-                # layer, wlist, wdeltalist = self.feedforward_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                layer, wlist, wdeltalist = self.feedforward_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
                 # layer, wlist, wdeltalist = self.bidirectional_recurrent_layer(self._l[-1], self._Dims[i-1], self._Dims[i])
+                if self._dropout:
+                    rnd = self.srng.binomial(layer.shape, p=self._prob, dtype=config.floatX)
+                    layer = layer * rnd
 
             self._l.append(layer)
             self._w.extend(wlist)
             self._w_delta.extend(wdeltalist)
             # self._r.append(srng.binomial((self._Dims[i], self._Dims[i+1]), p=self._p, dtype=config.floatX))
+        self.add_hmm_weight()
 
         self._h = self._l[-1]
 
-        dotted = T.exp(self._h)
-        dsm = T.sum(dotted, axis=2).dimshuffle(0, 1, 'x')
-        yln = self._y * T.log(dotted / dsm)
-
-        self._j = - T.sum(yln) / self._x.shape[1]
-        # self._j_grad_w = []
-        # for i in range(len(self._w)):
-            # self._j_grad_w.append(T.grad(self._j, self._w[i], disconnected_inputs='ignore'))
+        # self._j = self.negative_log_likelihood(self._h)
+        self._j = self.hmm_cost(self._h)
         self._j_grad_w = T.grad(self._j, self._w, disconnected_inputs='ignore')
 
         self._eta = shared(np.asarray(0).astype(config.floatX))
+        self.update_noise = self.set_noise(0.002)
 
     def plt_init(self):
         return
@@ -236,8 +295,8 @@ class DNN:
         jfunc = function([self._x, self._y], self._j)
         N_test = X.shape[0]
 
-        # TODO Batch_size = 10000
-        Batch_size = self._Batchsize
+        Batch_size = 64
+        # Batch_size = self._Batchsize
         Batch_num = (N_test + Batch_size - 1) // Batch_size
 
         tot_j = 0
@@ -294,10 +353,11 @@ class DNN:
         Batch_size = self._Batchsize
         Batch_num = (self.N_train + Batch_size - 1) // Batch_size
 
+        BZ = (100 if Batch_size == 1 else 10)
         for i in range(N_epoch * Batch_num):
             try:
                 Bno = i % Batch_num
-                if Bno % 10 == 0:
+                if Bno % BZ == 0:
                     print('Batch', Bno+1)
                 # for w in self._w:
                     # print(w.get_value())
@@ -312,6 +372,7 @@ class DNN:
                 # f = function([self._x, self._y], self._j_grad_w[-1])
                 # print(np.array(f(X_mb, Y_mb)))
 
+                # self.update_noise()
                 self.ufunc(X_mb, Y_mb)
                 self.rfunc()
                 if Bno == Batch_num - 1:
@@ -333,11 +394,11 @@ class DNN:
 
         return True
 
-    def predict(self, X, prob=False):
+    def predict(self, X, prob=False, group=False):
         N_test = X.shape[0]
 
-        # TODO Batch_size = 10000
-        Batch_size = self._Batchsize
+        Batch_size = 64
+        # Batch_size = self._Batchsize
         Batch_num = (N_test + Batch_size - 1) // Batch_size
 
         RTIME = 1
@@ -350,10 +411,22 @@ class DNN:
                 end = start + Batch_size
                 Xp = self.pad_zero(X[start:end])
                 res = pfunc(Xp)
-                yps.append(self.restore(res, X[start:end]))
+                if group:
+                    yps.extend(self.restore(res, X[start:end], group=True))
+                else:
+                    yps.append(self.restore(res, X[start:end]))
 
+            if group:
+                ynums = yps
+                break
             yp = np.concatenate(yps, axis=0)
             ynums.append(yp)
+        
+        if group:
+            if prob:
+                return ynums
+            return [y.argmax(axis=1) for y in ynums]
+
         yp = sum(ynums) / len(ynums)
 
         if prob:
@@ -379,12 +452,14 @@ class DNN:
                 rY.append(np.pad(y2, ((0, padlen), (0, 0)), 'constant', constant_values=(0, 0)))
             return np.array(rX).transpose((1, 0, 2)).astype(config.floatX), np.array(rY).transpose((1, 0, 2)).astype(config.floatX)
 
-    def restore(self, Y, X):
+    def restore(self, Y, X, group=False):
         Y = Y.transpose((1, 0, 2))
         res = []
         for x, y in zip(X, Y):
             q = y[:x.shape[0],:]
             res.append(q)
+        if group:
+            return res
         return np.concatenate(res, axis=0)
 
     def save_best_w(self):
@@ -393,6 +468,26 @@ class DNN:
     def load_best_w(self):
         for i in range(len(self._w)):
             self._w[i].set_value(self._best_w[i])
+
+    def hmm_decode(self, yp):
+        trans = self._w[-1].get_value()
+        lgprob = np.zeros((self._K, 1))
+        lst = []
+
+        for i in range(yp.shape[0]):
+            p = lgprob + trans + yp[i,:] 
+            lst.append(np.argmax(p, axis=0))
+            lgprob = np.max(p, axis=0).reshape((self._K, 1))
+
+        y = []
+        now = np.argmax(lgprob)
+        y.append(now)
+        for i in range(yp.shape[0]-1, 0, -1):
+            now = lst[i][now]
+            y.append(now)
+
+        y = y[::-1]
+        return y
 
 
 
